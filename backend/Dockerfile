@@ -1,20 +1,36 @@
 FROM python:3.11-slim
+
+# Thiết lập thư mục làm việc trong container
 WORKDIR /app
 
-# system deps
-RUN apt-get update && apt-get install -y build-essential git libpq-dev && rm -rf /var/lib/apt/lists/*
+# Biến môi trường
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=on
 
-# copy and install requirements
-COPY requirements.txt ./requirements.txt
-RUN python -m pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+# Cài đặt các gói hệ thống cần thiết (build-essential, libpq-dev, zlib1g-dev)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    libpq-dev \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# copy project
-COPY . /app
+# Copy requirements và cài đặt Python dependencies
+# Cần đảm bảo file requirements.txt nằm trong thư mục gốc của context build
+COPY requirements.txt /app/requirements.txt
+RUN python -m pip install --upgrade pip && \
+    pip install -r requirements.txt
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Copy toàn bộ source code backend vào container
+# Dấu chấm '.' ở đây đại diện cho thư mục 'backend/' của bạn
+COPY . /app/
 
+# Expose port (8000 là default, nhưng Gunicorn sẽ dùng biến $PORT của Render)
 EXPOSE 8000
 
-CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn core.wsgi:application --bind 0.0.0.0:8000"]
+# Lệnh Production mặc định (Sử dụng Gunicorn)
+# Lệnh này sẽ chạy nếu Procfile không được sử dụng.
+# Trỏ đến WSGI module: core.wsgi:application
+CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]
