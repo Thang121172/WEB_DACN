@@ -12,9 +12,8 @@ if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable not set.")
 
 # Render set ALLOWED_HOSTS tự động qua biến môi trường
-ALLOWED_HOSTS = [os.environ.get('RENDER_EXTERNAL_HOSTNAME')]
-if not ALLOWED_HOSTS[0]:
-    ALLOWED_HOSTS = ['127.0.0.1', 'localhost'] # Fallback nếu không có RENDER_EXTERNAL_HOSTNAME
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+ALLOWED_HOSTS = [RENDER_EXTERNAL_HOSTNAME] if RENDER_EXTERNAL_HOSTNAME else ['127.0.0.1', 'localhost']
 
 # Cấu hình Database cho Render (sử dụng dj-database-url)
 # Render tự động cung cấp DATABASE_URL
@@ -23,12 +22,16 @@ DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DATABASE_URL'),
         conn_max_age=600,
-        # QUAN TRỌNG: Kích hoạt kiểm tra sức khỏe và yêu cầu SSL
         conn_health_checks=True,
-        # BẮT BUỘC CHO RENDER: Yêu cầu kết nối SSL
-        options={'sslmode': 'require'}, 
+        # *** ĐÃ XÓA options={} khỏi đây để tránh lỗi TypeError ***
     )
 }
+
+# BẮT BUỘC CHO RENDER: Yêu cầu kết nối SSL.
+# PHẢI ĐẶT SAU KHI GỌI dj_database_url.config()
+if DATABASES['default'].get('ENGINE'):
+    DATABASES['default']['OPTIONS'] = {'sslmode': 'require'} 
+
 
 # Cấu hình Static Files (Quan trọng cho Render)
 STATIC_ROOT = BASE_DIR / 'staticfiles'
