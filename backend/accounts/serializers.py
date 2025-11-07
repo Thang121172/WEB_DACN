@@ -2,14 +2,11 @@
 
 from django.contrib.auth import authenticate, get_user_model
 from django.db import transaction
-from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
-# Import model
 from .models import Profile, OTPRequest
-# Import Merchant models
-from menus.models import Merchant, MerchantMember
+from menus.models import Merchant, MerchantMember 
 
 User = get_user_model()
 
@@ -17,7 +14,7 @@ User = get_user_model()
 # =========================================================
 # Helper: tạo JWT tokens từ user
 # =========================================================
-def generate_tokens_for_user(user: User):
+def generate_tokens_for_user(user: "User"): # ĐÃ SỬA LỖI PYLANCE: dùng "User"
     """
     Trả về access / refresh JWT cho user sau khi login hoặc xác thực OTP.
     """
@@ -34,7 +31,6 @@ def generate_tokens_for_user(user: User):
 class RegisterSerializer(serializers.Serializer):
     """
     Đăng ký tài khoản cơ bản (mặc định role=customer).
-    Flow này không dùng OTP, chủ yếu để dev test nhanh.
     """
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
@@ -54,7 +50,6 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError(errors)
         return data
 
-    @transaction.atomic
     def create(self, validated_data):
         user = User.objects.create_user(
             username=validated_data["username"],
@@ -67,7 +62,7 @@ class RegisterSerializer(serializers.Serializer):
 
 
 # =========================================================
-# 2. Đăng ký Merchant (tạo user hoặc convert user hiện tại)
+# 2. Đăng ký Merchant (tạo user/convert user thành merchant)
 # =========================================================
 class RegisterMerchantSerializer(serializers.Serializer):
     """
@@ -93,21 +88,16 @@ class RegisterMerchantSerializer(serializers.Serializer):
         if not u or not u.is_authenticated:
             if not data.get("username") or not data.get("password"):
                 raise serializers.ValidationError(
-                    {"detail": "Username và mật khẩu là bắt buộc cho tài khoản mới."}
+                    {"detail": "username & password required for new user"}
                 )
 
-            # Kiểm tra trùng lặp
             if User.objects.filter(username__iexact=data["username"]).exists():
-                raise serializers.ValidationError({"username": "Tên đăng nhập đã được dùng."})
+                raise serializers.ValidationError({"username": "taken"})
 
             email = (data.get("email") or "").strip().lower()
             if email and User.objects.filter(email__iexact=email).exists():
-                raise serializers.ValidationError({"email": "Email đã được dùng."})
+                raise serializers.ValidationError({"email": "used"})
 
-        # Kiểm tra tên Merchant duy nhất
-        if Merchant.objects.filter(name__iexact=data["name"]).exists():
-             raise serializers.ValidationError({"name": "Tên cửa hàng này đã tồn tại."})
-             
         return data
 
     @transaction.atomic
@@ -128,7 +118,6 @@ class RegisterMerchantSerializer(serializers.Serializer):
 
         # 2. Gắn / cập nhật profile.role = "merchant"
         profile, _ = Profile.objects.get_or_create(user=user)
-        # Cập nhật profile nếu user chưa phải là merchant
         if profile.role != "merchant":
             profile.role = "merchant"
             profile.store_name = validated.get("name", "")
@@ -146,8 +135,8 @@ class RegisterMerchantSerializer(serializers.Serializer):
         # 4. Thêm user đó làm owner trong MerchantMember
         MerchantMember.objects.create(user=user, merchant=merchant, role="owner")
 
-        # Trả về user và merchant vừa tạo
-        return user, merchant
+        # 5. TRẢ VỀ CHỈ USER OBJECT 
+        return user
 
 
 # =========================================================
@@ -175,7 +164,7 @@ class RegisterRequestOTPSerializer(serializers.Serializer):
 class RegisterConfirmOTPSerializer(serializers.Serializer):
     """
     Người dùng nhập email + otp + password (+ role).
-    Nếu OTP còn hạn -> tạo User + Profile, trả token JWT.
+    Nếu OTP còn hạn -> tạo User + Profile -> trả token JWT.
     """
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=8)
@@ -190,7 +179,6 @@ class RegisterConfirmOTPSerializer(serializers.Serializer):
         otp_code = data["otp"]
 
         try:
-            # Lấy OTP gần nhất, chưa dùng, khớp email và code
             otp_obj = (
                 OTPRequest.objects.filter(
                     identifier=email,
@@ -202,7 +190,7 @@ class RegisterConfirmOTPSerializer(serializers.Serializer):
         except OTPRequest.DoesNotExist:
             raise serializers.ValidationError({"otp": "OTP không hợp lệ."})
 
-        # Kiểm tra hạn dùng OTP (is_valid() là phương thức trong OTPRequest model)
+        # Kiểm tra hạn dùng OTP
         if not otp_obj.is_valid():
             raise serializers.ValidationError({"otp": "OTP đã hết hạn hoặc đã dùng."})
 
@@ -219,7 +207,7 @@ class RegisterConfirmOTPSerializer(serializers.Serializer):
 
         # 1. tạo user
         user = User.objects.create_user(
-            username=email,      # dùng email làm username mặc định
+            username=email,     # dùng email làm username mặc định
             email=email,
             password=password,
             is_active=True,
@@ -257,7 +245,7 @@ class LoginSerializer(serializers.Serializer):
         email = attrs.get("email", "").strip().lower()
         password = attrs.get("password", "")
 
-        # Do chúng ta tạo user với username=email, nên dùng email để authenticate
+        # do chúng ta tạo user với username=email
         user = authenticate(username=email, password=password)
         if not user:
             raise serializers.ValidationError("Sai email hoặc mật khẩu.")
@@ -323,7 +311,6 @@ class ResetPasswordConfirmSerializer(serializers.Serializer):
         otp_code = data["otp"]
 
         try:
-            # Lấy OTP gần nhất, chưa dùng, khớp email và code
             otp_obj = (
                 OTPRequest.objects.filter(
                     identifier=email,
@@ -338,10 +325,6 @@ class ResetPasswordConfirmSerializer(serializers.Serializer):
         if not otp_obj.is_valid():
             raise serializers.ValidationError({"otp": "OTP đã hết hạn hoặc đã dùng."})
 
-        # Kiểm tra user có tồn tại để reset không
-        if not User.objects.filter(email=email).exists():
-             raise serializers.ValidationError({"email": "Tài khoản không tồn tại."})
-             
         data["otp_obj"] = otp_obj
         data["email_normalized"] = email
         return data
@@ -352,7 +335,10 @@ class ResetPasswordConfirmSerializer(serializers.Serializer):
         new_password = validated_data["new_password"]
         otp_obj = validated_data["otp_obj"]
 
-        user = User.objects.get(email=email) # Đã check tồn tại ở validate()
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"email": "Tài khoản không tồn tại."})
 
         user.set_password(new_password)
         user.save(update_fields=["password"])
