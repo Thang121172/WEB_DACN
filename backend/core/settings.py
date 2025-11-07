@@ -8,11 +8,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-change-me")
 DEBUG = os.environ.get("DEBUG", "1") == "1"
 
-# Cho phép dev từ localhost
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0").split(",")
+ALLOWED_HOSTS = os.environ.get(
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1,0.0.0.0"
+).split(",")
 
 # === Apps ===
 INSTALLED_APPS = [
+    # Django built-ins
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -24,8 +27,10 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
     "corsheaders",
+    "django_celery_beat",
+    "django_celery_results",
 
-    # local apps của bạn
+    # local apps
     "accounts",
     "menus",
     "orders",
@@ -33,13 +38,13 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-
-    # CORS
+    # CORS phải đứng rất cao, trước CommonMiddleware
     "corsheaders.middleware.CorsMiddleware",
 
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -50,16 +55,17 @@ ROOT_URLCONF = "core.urls"
 WSGI_APPLICATION = "core.wsgi.application"
 ASGI_APPLICATION = "core.asgi.application"
 
-# === Database (dễ chạy nhất dùng sqlite trước) ===
-# Khi bạn có .env PostgreSQL thì đổi sang ENGINE 'django.db.backends.postgresql'
-if os.environ.get("USE_POSTGRES", "0") == "1":
+# === Database ===
+# container docker-compose của bạn đang dùng Postgres
+# nên để Postgres làm default
+if os.environ.get("USE_POSTGRES", "1") == "1":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": os.environ.get("POSTGRES_DB", "fastfood"),
             "USER": os.environ.get("POSTGRES_USER", "postgres"),
             "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
-            "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
+            "HOST": os.environ.get("POSTGRES_HOST", "fastfood_db"),
             "PORT": os.environ.get("POSTGRES_PORT", "5432"),
         }
     }
@@ -89,10 +95,7 @@ TEMPLATES = [
 ]
 
 # === Auth ===
-AUTH_PASSWORD_VALIDATORS = []  # dev cho nhanh; prod hãy bật
-
-# Nếu bạn có custom User model, khai báo AUTH_USER_MODEL ở đây
-# AUTH_USER_MODEL = "accounts.User"
+AUTH_PASSWORD_VALIDATORS = []  # dev cho nhanh
 
 # === i18n / tz ===
 LANGUAGE_CODE = "vi"
@@ -112,8 +115,6 @@ MEDIA_ROOT = BASE_DIR / "media"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        # hoặc dùng session cho dev:
-        # "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.AllowAny",
@@ -127,19 +128,20 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-# === CORS (dev) ===
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:5174",
-]
-CORS_ALLOW_HEADERS = [
-    "authorization",
-    "content-type",
-    "x-csrftoken",
-    "accept",
-    "accept-language",
-]
+# === CORS (DEV) ===
+# mở toang cho dev để khỏi dính preflight lỗi
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = False  # vì FE mình không gửi cookie cross-site
+CORS_ALLOW_HEADERS = ["*"]
+CORS_ALLOW_METHODS = ["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"]
+
+# nếu bạn MUỐN khóa lại chỉ localhost:5173, có thể bỏ cái ALL_ORIGINS
+# và bật cái dưới:
+# CORS_ALLOW_ALL_ORIGINS = False
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:5173",
+#     "http://localhost:5174",
+# ]
 
 # CSRF/session (dev)
 CSRF_COOKIE_SAMESITE = "Lax"
