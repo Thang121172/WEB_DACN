@@ -1,69 +1,46 @@
-from .base import *
-import os
-import dj_database_url 
-# --- QUAN TRỌNG: Phải import hàm config để đọc biến môi trường ---
-from decouple import config 
+# core/settings/prod.py
 
-# --- 1. Cấu hình Hosts và Bảo mật ---
+from .base import * # Import tất cả từ base
 
-# Lấy SECRET_KEY từ môi trường Render
-SECRET_KEY = config('SECRET_KEY')
+# Thiết lập DEBUG là False cho Production
+DEBUG = False
 
-# Lấy hostname của Render (ví dụ: fastfood-low3.onrender.com)
-RENDER_EXTERNAL_HOSTNAME = config('RENDER_EXTERNAL_HOSTNAME')
+# Lấy SECRET_KEY từ biến môi trường
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable not set.")
 
-# Khởi tạo ALLOWED_HOSTS: Thêm domain chính của Render
-ALLOWED_HOSTS = []
-if RENDER_EXTERNAL_HOSTNAME:
-    # Thêm host chính của Render (để giải quyết lỗi DisallowedHost)
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+# Render set ALLOWED_HOSTS tự động qua biến môi trường
+ALLOWED_HOSTS = [os.environ.get('RENDER_EXTERNAL_HOSTNAME')]
+if not ALLOWED_HOSTS[0]:
+    ALLOWED_HOSTS = ['127.0.0.1', 'localhost'] # Fallback nếu không có RENDER_EXTERNAL_HOSTNAME
 
-# Thêm 127.0.0.1 để tránh lỗi HTTP HEAD check khi khởi động
-ALLOWED_HOSTS.append('127.0.0.1') 
-
-
-# === Cấu hình Production bắt buộc ===
-DEBUG = False 
-
-# Đảm bảo Django xử lý header X-Forwarded-Host từ Render (HTTPS)
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-# Các cài đặt bảo mật quan trọng cho Production
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
-SECURE_HSTS_SECONDS = 31536000  # Bật HSTS cho 1 năm
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_SSL_REDIRECT = True # Buộc chuyển hướng HTTP sang HTTPS
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIF = True
-
-
-# --- 2. Cấu hình Database (PostgreSQL) ---
-
-# Render cung cấp biến môi trường DATABASE_URL cho dịch vụ Web Service.
+# Cấu hình Database cho Render (sử dụng dj-database-url)
+# Render tự động cung cấp DATABASE_URL
+import dj_database_url
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DATABASE_URL')
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=600,
+        # QUAN TRỌNG: Cần thiết lập SSL cho Render PostgreSQL
+        conn_health_checks=True,
+        # Nếu gặp lỗi SSL, hãy thử thêm ssl_require
+        # options={'sslmode': 'require'}, 
     )
 }
-# Kích hoạt kết nối SSL cho Render (bắt buộc)
-DATABASES['default']['CONN_MAX_AGE'] = 600
-DATABASES['default']['OPTIONS'] = {'sslmode': 'require'} 
 
-
-# --- 3. Cấu hình Static Files (Sử dụng Whitenoise) ---
-
-# Nơi thu thập tất cả file tĩnh
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
+# Cấu hình Static Files (Quan trọng cho Render)
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# Thiết lập bảo mật
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+X_FRAME_OPTIONS = 'DENY'
+# Có thể thêm SECURE_HSTS_SECONDS nếu cần
 
-# --- 4. Cấu hình Celery (Sử dụng Redis của Render) ---
-
-# Render sẽ cung cấp biến môi trường REDIS_URL
-CELERY_BROKER_URL = config('REDIS_URL')
-CELERY_RESULT_BACKEND = config('REDIS_URL')
-
-# Tắt Mailhog (chỉ dùng trong dev), giữ mặc định SMTP cho Production
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Ghi log lỗi
+LOGGING = {
+    # ... cấu hình logging của bạn ...
+}
