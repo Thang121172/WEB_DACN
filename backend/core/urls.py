@@ -11,20 +11,27 @@ from orders.views import OrderViewSet, MerchantViewSet, ShipperViewSet
 
 # ----- Healthcheck đơn giản cho container -----
 def healthcheck(_request):
-    return JsonResponse({"status": "ok"})
-
+    """
+    Endpoint đơn giản để kiểm tra trạng thái hoạt động của service.
+    """
+    return JsonResponse({"status": "ok", "message": "API is operational"})
+    # Đã bổ sung thêm message để dễ theo dõi hơn
 
 # ----- DRF Router -----
 router = DefaultRouter()
-router.register(r"orders",   OrderViewSet,    basename="order")
+router.register(r"orders", OrderViewSet, basename="order")
 router.register(r"merchant", MerchantViewSet, basename="merchant")
-router.register(r"shipper",  ShipperViewSet,  basename="shipper")
+router.register(r"shipper", ShipperViewSet, basename="shipper")
 # ví dụ sau này:
 # router.register(r"inventory", InventoryViewSet, basename="inventory")
 
 
 urlpatterns = [
-    # Check server sống
+    # 1. QUAN TRỌNG: Thêm đường dẫn gốc ('/') trỏ về healthcheck 
+    # Điều này giải quyết lỗi Not Found: / khi Render kiểm tra
+    path("", healthcheck, name="root_healthcheck"),
+    
+    # 2. Check server sống (dùng cho các dịch vụ khác, đã có)
     path("health/", healthcheck, name="healthcheck"),
 
     # Django admin
@@ -37,6 +44,6 @@ urlpatterns = [
     path("api/accounts/", include("accounts.urls")),
 
     # Các module khác tách riêng
-    path("api/menus/", include("menus.urls")),        # menus/urls.py
-    path("api/payments/", include("payments.urls")),  # payments/urls.py
+    path("api/menus/", include("menus.urls")),      # menus/urls.py
+    path("api/payments/", include("payments.urls")), # payments/urls.py
 ]
