@@ -8,17 +8,17 @@ services:
     databaseName: fastfood_db
     user: fastfood_user
 
-  # 2. Dịch vụ Web Django/DRF (Chạy ứng dụng)
+  # 2. Dịch vụ Web Django/DRF (Nơi ứng dụng của bạn chạy)
   - type: web
     name: fastfood-backend
     env: python
     plan: free 
     
-    # Lệnh Build: Cài đặt dependencies và thu thập static files
-    # Chúng ta vẫn cần chạy collectstatic trong build command
+    # Lệnh Build: Cài đặt dependencies và thu thập static files (Vẫn cần collectstatic ở đây)
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
       
-    # Lệnh Start Command: Đã sửa từ 'backend.wsgi' sang 'fastfood.wsgi'
+    # Lệnh Start Command: ĐÃ KHẮC PHỤC LỖI MODULE NOT FOUND
+    # Trỏ chính xác đến module 'fastfood' của bạn.
     startCommand: "gunicorn fastfood.wsgi:application"
     
     port: 8000
@@ -44,9 +44,9 @@ services:
           property: host
       # CELERY BROKER URL (Nếu bạn dùng Celery, hãy thêm URL Redis tại đây)
       - key: CELERY_BROKER_URL
-        value: "" # Cần cấu hình Redis URL nếu sử dụng
+        value: ""
 
-  # 3. Job để chạy Migration (Bắt buộc phải chạy sau khi code được triển khai)
+  # 3. Dịch vụ Job để chạy Migration (Lựa chọn A: Tách biệt Migration)
   - type: job
     name: fastfood-migrate
     env: python
@@ -54,7 +54,7 @@ services:
     # Lệnh Build tương tự Web Service
     buildCommand: "pip install -r requirements.txt"
     
-    # Lệnh Start: Chỉ chạy migration
+    # Lệnh Start: Chỉ chạy migration sau khi Web Service được Deploy
     startCommand: "python manage.py migrate"
     
     envVars:
@@ -67,6 +67,3 @@ services:
           type: web
           name: fastfood-backend
           envVarKey: SECRET_KEY
-
----
-
