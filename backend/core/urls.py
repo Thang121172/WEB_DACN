@@ -6,7 +6,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 # QUAN TRỌNG: Sửa lỗi "App Not Ready" bằng cách dùng đường dẫn tuyệt đối (backend.<app>.views)
-from backend.orders.views import OrderViewSet, MerchantViewSet, ShipperViewSet
+from orders.views import OrderViewSet, MerchantViewSet, ShipperViewSet
 # Khi có thêm viewset khác (InventoryViewSet, v.v.) bạn có thể register thêm ở đây
 
 # ----- Healthcheck đơn giản cho container -----

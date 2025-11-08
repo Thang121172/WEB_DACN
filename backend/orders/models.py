@@ -3,7 +3,7 @@
 from django.db import models
 from django.conf import settings
 # ĐÃ SỬA: Dùng đường dẫn tuyệt đối (backend.menus.models)
-from backend.menus.models import Merchant, MenuItem
+from menus.models import Merchant, MenuItem
 
 User = settings.AUTH_USER_MODEL
 
