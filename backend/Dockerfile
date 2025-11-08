@@ -4,11 +4,13 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Biến môi trường
+# RẤT QUAN TRỌNG: Đặt biến DJANGO_SETTINGS_MODULE để Django/Celery tìm thấy cài đặt.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    DJANGO_SETTINGS_MODULE=backend.settings
 
 # Cài đặt các gói hệ thống cần thiết và công cụ wait-for-it
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -34,7 +36,7 @@ COPY . /app/
 EXPOSE 8000
 
 # Lệnh Production cuối cùng (WEB SERVICE):
-# SỬA LỖI: Trỏ Gunicorn đến backend.core.wsgi:application để khắc phục ModuleNotFoundError.
+# Gunicorn sử dụng đường dẫn đầy đủ.
 CMD ["/usr/bin/wait-for-it", "${WAIT_HOSTS}:5432", "--timeout=60", "--", "sh", "-c", \
       "python manage.py migrate --noinput && \
       gunicorn **backend.core.wsgi:application** --bind 0.0.0.0:$PORT"]

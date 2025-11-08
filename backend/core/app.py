@@ -1,40 +1,28 @@
 import os
-import sys
-
-# Thêm thư mục gốc của dự án ('backend') vào Python Path để Celery có thể import
-# Các package như 'orders', 'core', 'backend.settings', v.v.
-# Giả sử thư mục "backend" là thư mục chứa wsgi.py và các app con.
-# /app là thư mục gốc của repository trên Render.
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
-
-import django
 from celery import Celery
-from django.conf import settings
+from django.conf import settings # Import settings
+import django # Import django
 
-# Đặt biến môi trường Django
+# Đặt biến môi trường cho Celery (Cũng nên đặt ở đây cho an toàn)
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 
-# Khởi tạo Celery
-# Đoạn này sẽ gọi django.setup() và gây lỗi nếu chưa fix sys.path
-celery_app = Celery('backend')
+# Khởi tạo Celery App
+# Giả sử instance Celery của bạn tên là 'app'
+app = Celery('backend')
 
-# Load cấu hình từ Django settings
-celery_app.config_from_object('django.conf:settings', namespace='CELERY')
+# Cấu hình Celery bằng cách sử dụng các hằng số cấu hình Django.
+# (Bạn cần đảm bảo CELERY_BROKER_URL, v.v. đã được định nghĩa trong settings.py)
+app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Tự động tìm và đăng ký các task từ tất cả các ứng dụng Django
-celery_app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+# RẤT QUAN TRỌNG: Thiết lập môi trường Django
+django.setup() 
 
-@celery_app.task(bind=True)
+# Khám phá các tác vụ tự động từ tất cả các ứng dụng Django đã cài đặt
+app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+
+
+@app.task(bind=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')
 
-# Đảm bảo Django được setup sau khi Celery app đã được cấu hình nếu cần
-# Nhưng thông thường django.setup() được gọi trong quá trình Celery config_from_object
-try:
-    if not django.conf.settings.configured:
-        django.setup()
-except Exception:
-    pass
-
-# Đổi tên app từ celery_app thành app theo quy ước của Celery
-app = celery_app
+# ... (các tác vụ khác nếu có)
