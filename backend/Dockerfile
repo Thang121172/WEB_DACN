@@ -33,10 +33,8 @@ COPY . /app/
 # Expose port (Dùng cho môi trường local)
 EXPOSE 8000
 
-# Lệnh Production cuối cùng:
-# 1. Chờ DB sẵn sàng (WAIT_HOSTS được cấu hình trong Render Environment Variables)
-# 2. Chạy migrate
-# 3. Chạy Gunicorn, lắng nghe trên 0.0.0.0:$PORT
+# Lệnh Production cuối cùng (WEB SERVICE):
+# SỬA LỖI: Trỏ Gunicorn đến backend.core.wsgi:application để khắc phục ModuleNotFoundError.
 CMD ["/usr/bin/wait-for-it", "${WAIT_HOSTS}:5432", "--timeout=60", "--", "sh", "-c", \
-     "python manage.py migrate --noinput && \
-      gunicorn core.wsgi:application --bind 0.0.0.0:$PORT"]
+      "python manage.py migrate --noinput && \
+      gunicorn **backend.core.wsgi:application** --bind 0.0.0.0:$PORT"]

@@ -16,7 +16,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 # Cần import các Models liên quan
 from .models import OTPRequest, Profile
-from backend.menus.models import Merchant, MerchantMember
+from menus.models import Merchant, MerchantMember
 # Cần import Celery Task (Phải có file accounts/tasks.py)
 from .tasks import send_otp_email
 
