@@ -33,14 +33,12 @@ INSTALLED_APPS = [
     'corsheaders',
     'celery', 
 
-    # Your Apps: ĐÃ CẬP NHẬT VÀ SỬA LỖI
+    # Your Apps: ĐÃ CẬP NHẬT để KHÔNG CÓ TIỀN TỐ 'backend.'
     'core', 
-    # **ĐÃ SỬA:** Trỏ thẳng đến AppConfig trong accounts/app.py
-    'accounts.app.AccountsConfig', 
+    'accounts.app.AccountsConfig', # Vẫn trỏ đến app.py
     'menus',  
     'orders', 
     'payments', 
-    # Thêm các ứng dụng custom khác nếu có
 ]
 
 MIDDLEWARE = [
@@ -55,7 +53,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# ĐÃ SỬA LỖI - BỎ TIỀN TỐ 'backend.'
+# **SỬA LỖI:** Loại bỏ tiền tố 'backend.' 
+# vì wsgi.py và urls.py đã được copy trực tiếp vào /app
 ROOT_URLCONF = 'urls' 
 WSGI_APPLICATION = 'wsgi.application'
 
