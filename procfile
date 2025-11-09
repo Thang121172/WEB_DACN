@@ -1,8 +1,7 @@
 # Cấu hình Web, Worker và Beat cho môi trường triển khai.
 
 # Tiến trình Web chính (Gunicorn)
-# Đảm bảo DJANGO_SETTINGS_MODULE=settings (vì settings.py nằm trong /app) 
-# và sử dụng wsgi:application (vì wsgi.py nằm trong /app).
+# Đảm bảo DJANGO_SETTINGS_MODULE=settings và sử dụng wsgi:application.
 web: DJANGO_SETTINGS_MODULE=settings gunicorn wsgi:application --bind 0.0.0.0:$PORT
 
 # Tiến trình Celery Worker (Task bất đồng bộ)
