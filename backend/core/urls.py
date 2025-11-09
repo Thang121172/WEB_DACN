@@ -41,10 +41,10 @@ urlpatterns = [
 
     # Auth / đăng ký / đăng nhập / OTP
     # Đã chuyển sang đường dẫn tuyệt đối: "backend.accounts.urls"
-    path("api/accounts/", include("backend.accounts.urls")),
+    path("api/accounts/", include("accounts.urls")),
 
     # Các module khác tách riêng
     # Đã chuyển sang đường dẫn tuyệt đối
-    path("api/menus/", include("backend.menus.urls")), 
-    path("api/payments/", include("backend.payments.urls")),
+    path("api/menus/", include("menus.urls")), 
+    path("api/payments/", include("payments.urls")),
 ]
