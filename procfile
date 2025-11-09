@@ -1,10 +1,14 @@
-# CẢNH BÁO: Đã thêm DJANGO_SETTINGS_MODULE và sửa đường dẫn Gunicorn
+# Cấu hình Web, Worker và Beat cho môi trường triển khai.
 
 # Tiến trình Web chính (Gunicorn)
+# Đảm bảo DJANGO_SETTINGS_MODULE=settings (vì settings.py nằm trong /app) 
+# và sử dụng wsgi:application (vì wsgi.py nằm trong /app).
 web: DJANGO_SETTINGS_MODULE=settings gunicorn wsgi:application --bind 0.0.0.0:$PORT
 
 # Tiến trình Celery Worker (Task bất đồng bộ)
+# Celery cần DJANGO_SETTINGS_MODULE để load các task.
 worker: DJANGO_SETTINGS_MODULE=settings celery -A core.celery_app worker -l info
 
 # Tiến trình Celery Beat (Lập lịch tác vụ)
+# Sử dụng database scheduler để quản lý các task định kỳ.
 beat: DJANGO_SETTINGS_MODULE=settings celery -A core.celery_app beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler

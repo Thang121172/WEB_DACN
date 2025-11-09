@@ -7,6 +7,7 @@ import dj_database_url
 load_dotenv() 
 
 # Thiết lập đường dẫn cơ sở của dự án
+# BASE_DIR sẽ là thư mục cha của thư mục 'backend' (tức là thư mục gốc của repo)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --------------------------
@@ -31,11 +32,12 @@ INSTALLED_APPS = [
     # Third-party Apps
     'rest_framework',
     'corsheaders',
-    'celery', # Đã thêm 'celery'
+    'celery', 
 
-    # Your Apps: ĐÃ SỬA LỖI CHÍNH TẢ
-    'backend.menus', # <-- Sửa từ 'menu' thành 'menus'
-    'backend.orders', 
+    # Your Apps: ĐÃ SỬA LỖI - BỎ TIỀN TỐ 'backend.'
+    'menus',  # <-- Đã sửa từ 'backend.menus'
+    'orders', # <-- Đã sửa từ 'backend.orders'
+    # Thêm các ứng dụng custom khác nếu có (ví dụ: 'accounts', 'core',...)
 ]
 
 MIDDLEWARE = [
@@ -50,8 +52,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'backend.urls' 
-WSGI_APPLICATION = 'backend.wsgi.application'
+# ĐÃ SỬA LỖI - BỎ TIỀN TỐ 'backend.'
+ROOT_URLCONF = 'urls' 
+WSGI_APPLICATION = 'wsgi.application'
 
 
 # --------------------------
