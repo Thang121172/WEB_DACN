@@ -9,7 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=on \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
     PYTHONPATH=/app \
-    DJANGO_SETTINGS_MODULE=settings  # ĐÃ SỬA THÀNH settings
+    DJANGO_SETTINGS_MODULE=settings
 
 # Cài đặt hệ thống và công cụ wait-for-it
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -33,5 +33,5 @@ COPY backend /app/
 # Expose port (Dùng cho môi trường local)
 EXPOSE 8000
 
-# Lệnh mặc định nếu không có Procfile (ĐÃ SỬA THÀNH wsgi:application)
+# Lệnh mặc định nếu không có Procfile
 CMD ["gunicorn", "wsgi:application", "--bind", "0.0.0.0:$PORT"]
