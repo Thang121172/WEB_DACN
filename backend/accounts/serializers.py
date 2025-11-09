@@ -1,12 +1,11 @@
-# backend/accounts/serializers.py
-
+from __future__ import annotations
 from django.contrib.auth import authenticate, get_user_model
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Profile, OTPRequest
-# ĐÃ SỬA: Dùng đường dẫn tuyệt đối (backend.menus.models)
+# ĐÃ SỬA: Giữ import ngắn gọn, sử dụng tên App (menus)
 from menus.models import Merchant, MerchantMember 
 
 User = get_user_model()
@@ -15,7 +14,7 @@ User = get_user_model()
 # =========================================================
 # Helper: tạo JWT tokens từ user
 # =========================================================
-def generate_tokens_for_user(user: "User"): # ĐÃ SỬA LỖI PYLANCE: dùng "User"
+def generate_tokens_for_user(user: "User"):
     """
     Trả về access / refresh JWT cho user sau khi login hoặc xác thực OTP.
     """
@@ -208,7 +207,7 @@ class RegisterConfirmOTPSerializer(serializers.Serializer):
 
         # 1. tạo user
         user = User.objects.create_user(
-            username=email,     # dùng email làm username mặc định
+            username=email,    # dùng email làm username mặc định
             email=email,
             password=password,
             is_active=True,
