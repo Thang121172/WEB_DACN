@@ -7,7 +7,7 @@ class PaymentsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     
     # SỬA LỖI: Tên (name) phải là đường dẫn module đầy đủ
-    name = "backend.payments"
+    name = "payments"
     verbose_name = "Payments / Transactions"
 
     def ready(self):
