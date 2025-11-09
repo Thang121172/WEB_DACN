@@ -9,8 +9,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=on \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
     PYTHONPATH=/app \
-    DJANGO_SETTINGS_MODULE=core.settings \
-    PORT=8000
+    DJANGO_SETTINGS_MODULE=core.settings
+
+# PORT KHÔNG CẦN SET Ở ĐÂY NỮA
+# (Render sẽ tự động cung cấp $PORT khi chạy container)
+# Xóa: PORT=8000
 
 # Cài đặt hệ thống và công cụ wait-for-it
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -32,12 +35,12 @@ RUN python -m pip install --upgrade pip && \
 
 # --- COPY MÃ NGUỒN BACKEND ---
 # Copy toàn bộ mã nguồn backend (chứa manage.py, core, accounts, v.v.) vào /app
+# CẤU TRÚC SAU KHI COPY: /app/manage.py, /app/core/settings.py, /app/accounts/...
 COPY backend /app/
 
 # Expose port (Dùng cho môi trường local)
 EXPOSE 8000
 
 # === CMD TỐI GIẢN ===
-# Lệnh này sẽ được ghi đè bởi "Docker Command" trên Render,
-# nhưng chúng ta vẫn khai báo để đảm bảo tính đầy đủ.
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Sử dụng biến môi trường $PORT để đồng bộ với Render
+CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:$PORT"]
