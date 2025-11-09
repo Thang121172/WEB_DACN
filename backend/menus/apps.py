@@ -1,14 +1,11 @@
-# backend/menus/apps.py
-
 from django.apps import AppConfig
-
 
 class MenusConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     
-    # SỬA LỖI: Tên (name) phải là đường dẫn module đầy đủ
-    # thay vì chỉ là "menus"
-    name = "backend.menus"
+    # **ĐÃ SỬA LỖI:** Tên (name) phải là tên module trong container,
+    # tức là 'menus', KHÔNG PHẢI 'backend.menus'
+    name = "menus" 
     verbose_name = "Merchant & Menu Management"
 
     def ready(self):

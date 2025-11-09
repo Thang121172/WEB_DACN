@@ -1,10 +1,9 @@
 from django.apps import AppConfig
 
-
 class AccountsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     
-    # **ĐÃ SỬA:** Đổi từ "backend.accounts" thành "accounts"
+    # **ĐÃ SỬA:** Tên (name) phải là 'accounts'
     name = "accounts" 
 
     def ready(self):
