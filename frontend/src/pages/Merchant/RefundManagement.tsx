@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuthContext } from '../../context/AuthContext';
+import { useToast } from '../../components/Toast';
 import api from '../../services/http';
 
 interface Order {
@@ -15,6 +16,7 @@ export default function RefundManagement() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthContext();
+  const { showToast } = useToast();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [refundAmount, setRefundAmount] = useState('');
@@ -35,7 +37,7 @@ export default function RefundManagement() {
         setRefundAmount(response.data.total_amount.toString());
       } catch (error) {
         console.error('Failed to fetch order:', error);
-        alert('Không thể tải thông tin đơn hàng');
+        showToast('Không thể tải thông tin đơn hàng', 'error');
         navigate('/merchant/dashboard');
       } finally {
         setLoading(false);
@@ -50,13 +52,13 @@ export default function RefundManagement() {
   const handleRefund = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderId || !order || !refundAmount) {
-      alert('Vui lòng nhập số tiền hoàn');
+      showToast('Vui lòng nhập số tiền hoàn', 'warning');
       return;
     }
 
     const amount = parseFloat(refundAmount);
     if (amount <= 0 || amount > parseFloat(order.total_amount.toString())) {
-      alert('Số tiền hoàn không hợp lệ');
+      showToast('Số tiền hoàn không hợp lệ', 'error');
       return;
     }
 
@@ -67,11 +69,13 @@ export default function RefundManagement() {
         reason: reason
       });
 
-      alert(`Đã hoàn tiền ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)} thành công`);
-      navigate('/merchant/dashboard');
+      showToast(`Đã hoàn tiền ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)} thành công`, 'success');
+      setTimeout(() => {
+        navigate('/merchant/dashboard');
+      }, 1500);
     } catch (error: any) {
       console.error('Failed to process refund:', error);
-      alert(error.response?.data?.detail || 'Không thể xử lý hoàn tiền');
+      showToast(error.response?.data?.detail || 'Không thể xử lý hoàn tiền', 'error');
     } finally {
       setSubmitting(false);
     }

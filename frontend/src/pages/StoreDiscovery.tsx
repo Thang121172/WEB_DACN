@@ -43,15 +43,25 @@ export default function StoreDiscovery() {
                 radius: 10, // 10km
               },
             });
+            // API nearby trả về {merchants: [...], count: ...}
+            if (response.data && response.data.merchants) {
+              setRestaurants(response.data.merchants);
+              console.log(`✅ Tìm thấy ${response.data.merchants.length} cửa hàng gần bạn trong phạm vi 10km`);
+            } else {
+              // KHÔNG fallback - chỉ hiển thị cửa hàng trong phạm vi
+              console.warn('⚠️ Không tìm thấy cửa hàng gần đó trong phạm vi 10km');
+              setRestaurants([]);
+            }
           } catch (error) {
-            // Fallback: lấy tất cả merchants
-            response = await api.get('/menus/merchants/');
+            console.error('Failed to fetch nearby merchants:', error);
+            // KHÔNG fallback - chỉ hiển thị khi có vị trí và API thành công
+            setRestaurants([]);
           }
         } else {
-          response = await api.get('/menus/merchants/');
+          // Nếu chưa có vị trí, KHÔNG lấy merchants (yêu cầu vị trí)
+          console.log('⚠️ Chưa có vị trí, không hiển thị cửa hàng');
+          setRestaurants([]);
         }
-
-        setRestaurants(response.data || []);
       } catch (error) {
         console.error('Failed to fetch restaurants:', error);
         setRestaurants([]);

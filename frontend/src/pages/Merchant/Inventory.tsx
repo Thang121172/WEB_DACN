@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/http';
 import { useAuthContext } from '../../context/AuthContext';
+import { useToast } from '../../components/Toast';
 
 interface MenuItem {
   id: number;
@@ -21,6 +22,7 @@ const formatCurrency = (amount: number) => {
 export default function Inventory() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthContext();
+  const { showToast } = useToast();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<{ id: number; stock: number; type: 'IN' | 'OUT' | 'ADJUST' } | null>(null);
@@ -42,7 +44,7 @@ export default function Inventory() {
       setMenuItems(response.data);
     } catch (error) {
       console.error('Failed to fetch menu items:', error);
-      alert('Không thể tải danh sách món ăn');
+      showToast('Không thể tải danh sách món ăn', 'error');
     } finally {
       setLoading(false);
     }
@@ -55,12 +57,12 @@ export default function Inventory() {
         quantity: quantity,
         type: type
       });
-      alert('Đã cập nhật tồn kho thành công');
+      showToast('Đã cập nhật tồn kho thành công', 'success');
       setEditingItem(null);
       fetchMenuItems();
     } catch (error: any) {
       console.error('Failed to adjust stock:', error);
-      alert(error.response?.data?.detail || 'Không thể cập nhật tồn kho');
+      showToast(error.response?.data?.detail || 'Không thể cập nhật tồn kho', 'error');
     } finally {
       setAdjusting(false);
     }
@@ -171,11 +173,12 @@ interface StockAdjustFormProps {
 
 const StockAdjustForm: React.FC<StockAdjustFormProps> = ({ item, editingItem, onSave, onCancel, adjusting }) => {
   const [quantity, setQuantity] = useState(editingItem.type === 'ADJUST' ? editingItem.stock : 0);
+  const { showToast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (quantity < 0) {
-      alert('Số lượng không hợp lệ');
+      showToast('Số lượng không hợp lệ', 'error');
       return;
     }
     onSave(quantity, editingItem.type);

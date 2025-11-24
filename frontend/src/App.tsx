@@ -26,6 +26,7 @@ import AdminHome from './pages/AdminHome'
 import UserManagement from './pages/Admin/UserManagement'
 import ShipperRevenue from './pages/ShipperRevenue'
 import ShipperProfile from './pages/ShipperProfile'
+import Profile from './pages/Profile'
 
 import MerchantDashboard from './pages/Merchant/MerchantDashboard'
 import MerchantConfirmOrder from './pages/Merchant/MerchantConfirmOrder'
@@ -228,6 +229,15 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Checkout />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             } 
           />

@@ -1,0 +1,248 @@
+================================================================================
+DANH SACH TAI KHOAN CUA HANG - TP.HCM
+================================================================================
+
+Tong so cua hang: 33
+
+Tai khoan mac dinh cho tat ca merchant: Merchant123
+
+--------------------------------------------------------------------------------
+
+1. Quán Bún Bò Huế 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu 3, Đường Nguyễn Thị Minh Khai, Phường Tam Hòa, Quận Bình Tân, TP.HCM
+   So dien thoai: 02513395828
+
+2. Cơm Tấm Cali 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu C, Đường Nguyễn Thái Học, Phường Tam Hiệp, Quận Tân Phú, TP.HCM
+   So dien thoai: 0287535795
+
+3. Quán Bánh Xèo 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 645 Đường Trần Quốc Toản, Phường Tân Uyên, Quận Bình Thạnh, TP.HCM
+   So dien thoai: 02516278269
+
+4. Quán Bún Mọc 3 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Nguyễn Đình Chiểu, Phường Quận 6, Quận Quận 1, TP.HCM
+   So dien thoai: 02513677887
+
+5. Cơm Niêu - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu B, Đường Hoàng Hoa Thám, Phường Tam Hiệp, Quận Gò Vấp, TP.HCM
+   So dien thoai: 02518094705
+
+6. Quán Bún Mắm 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu B, Đường Điện Biên Phủ, Phường Bửu Long, Quận Quận 8, TP.HCM
+   So dien thoai: 0284150587
+
+7. Quán Bánh Mì Chảo 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Nguyễn Thái Học, Phường Quận 3, Quận Quận 7, TP.HCM
+   So dien thoai: 0280112892
+
+8. Nhà Hàng Hàn Quốc - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu 1, Đường Hoàng Hoa Thám, Phường Quận 12, Quận Hóc Môn, TP.HCM
+   So dien thoai: 0284142047
+
+9. Cơm Gà Nướng Muối 3 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Lý Thường Kiệt, Phường Quận 6, Quận Tân Phú, TP.HCM
+   So dien thoai: 0282331711
+
+10. Nhà Hàng Việt Nam 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 954 Đường Nguyễn Đình Chiểu, Phường Tân Phong, Quận Thủ Đức, TP.HCM
+   So dien thoai: 02749808861
+
+11. Quán Bánh Mì Thịt Nướng 3 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 853 Đường Lý Thường Kiệt, Phường Dầu Tiếng, Quận Quận 12, TP.HCM
+   So dien thoai: 0285142558
+
+12. Cơm Gà Xối Mỡ 3 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu A, Đường Lê Lợi, Phường Long Bình, Quận Thủ Đức, TP.HCM
+   So dien thoai: 02744826690
+
+13. Quán Bún Bò Huế 1 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 886 Đường Nguyễn Huệ, Phường Thuận An, Quận Tân Phú, TP.HCM
+   So dien thoai: 02743716475
+
+14. Quán Bánh Mì Chả Cá 3 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Nguyễn Văn Trị, Phường Quang Vinh, Quận Tân Bình, TP.HCM
+   So dien thoai: 0286055765
+
+15. Nhà Hàng Hàn Quốc 1 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu C, Đường Võ Thị Sáu, Phường Thủ Đức, Quận Quận 8, TP.HCM
+   So dien thoai: 0284107413
+
+16. Quán Bánh Xèo - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu 1, Đường Nguyễn Trãi, Phường Bửu Long, Quận Thủ Đức, TP.HCM
+   So dien thoai: 02512708904
+
+17. Quán Cháo Lòng 1 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu B, Đường Võ Thị Sáu, Phường Tân Vạn, Quận Quận 3, TP.HCM
+   So dien thoai: 0286159505
+
+18. Quán Bánh Mì 4 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu B, Đường Nguyễn Văn Cừ, Phường Phú Nhuận, Quận Gò Vấp, TP.HCM
+   So dien thoai: 0288129894
+
+19. Quán Bánh Mì Chảo 1 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 145 Đường Nguyễn Thị Minh Khai, Phường Tam Hiệp, Quận Quận 9, TP.HCM
+   So dien thoai: 02745093969
+
+20. Bún Bò Huế - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Nguyễn Văn Linh, Phường Bến Cát, Quận Quận 10, TP.HCM
+   So dien thoai: 02748722409
+
+21. Quán Bún Bò Nam Bộ 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu A, Đường Bạch Đằng, Phường Bình Thạnh, Quận Quận 12, TP.HCM
+   So dien thoai: 02745646529
+
+22. Quán Bún Mọc - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 109 Đường Nguyễn Thái Học, Phường An Bình, Quận Quận 11, TP.HCM
+   So dien thoai: 02514565298
+
+23. Quán Bánh Mì 1 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu 1, Đường Nam Kỳ Khởi Nghĩa, Phường Quận 12, Quận Quận 1, TP.HCM
+   So dien thoai: 02745444824
+
+24. Nhà Hàng Nhật Bản 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu 2, Đường Trần Quốc Toản, Phường An Bình, Quận Bình Thạnh, TP.HCM
+   So dien thoai: 02744452565
+
+25. Nhà Hàng Việt Nam - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 775 Đường Cộng Hòa, Phường Tam Hiệp, Quận Phú Nhuận, TP.HCM
+   So dien thoai: 02514302576
+
+26. Quán Bún Riêu 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Lê Lợi, Phường Tân Bình, Quận Bình Thạnh, TP.HCM
+   So dien thoai: 0281655721
+
+27. Bánh Canh Cua 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Lê Duẩn, Phường Quận 8, Quận Gò Vấp, TP.HCM
+   So dien thoai: 0280481094
+
+28. Quán Bún Bò Giò Heo 1 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Nguyễn Trãi, Phường An Bình, Quận Quận 12, TP.HCM
+   So dien thoai: 02517537976
+
+29. Nhà Hàng Ý - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu B, Đường Nguyễn Trãi, Phường Dầu Tiếng, Quận Quận 9, TP.HCM
+   So dien thoai: 02746069877
+
+30. Nhà Hàng Thái Lan 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 947 Đường Nguyễn Văn Linh, Phường Thủ Đức, Quận Bình Thạnh, TP.HCM
+   So dien thoai: 0281308410
+
+31. Quán Bánh Mì Thịt Nướng 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 927 Đường Nguyễn Văn Linh, Phường Bửu Long, Quận Phú Nhuận, TP.HCM
+   So dien thoai: 0284313176
+
+32. Quán Bún Đậu 2 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 555 Đường Pasteur, Phường Long Bình Tân, Quận Quận 4, TP.HCM
+   So dien thoai: 0285593820
+
+33. Quán Bún Riêu Cua 3 - TP.HCM
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu 3, Đường Điện Biên Phủ, Phường Bến Cát, Quận Gò Vấp, TP.HCM
+   So dien thoai: 02516512483
+
+================================================================================
+
+HUONG DAN SU DUNG:
+1. Dang nhap voi bat ky tai khoan merchant nao trong danh sach
+2. Password mac dinh: Merchant123
+3. Sau khi dang nhap, ban se thay dashboard merchant
+4. Co the xac nhan don hang tu trang merchant dashboard

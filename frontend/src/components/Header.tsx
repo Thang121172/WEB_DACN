@@ -44,11 +44,13 @@ export default function Header(){
                             <Link to="/customer" className="hover:text-grabGreen-700 transition duration-150">Menu</Link>
                             <Link to="/stores" className="hover:text-grabGreen-700 transition duration-150">Cửa hàng</Link>
                             <Link to="/customer/orders" className="hover:text-grabGreen-700 transition duration-150">Đơn hàng</Link>
+                            <Link to="/profile" className="hover:text-grabGreen-700 transition duration-150">Hồ sơ</Link>
                             <Link to="/merchant/register" className="hover:text-grabGreen-700 transition duration-150">Đăng ký cửa hàng</Link>
                         </>
                     )}
                     {user?.role === "merchant" && (
                         <>
+                            <Link to="/merchant/dashboard" className="hover:text-grabGreen-700 transition duration-150">Tổng quan</Link>
                             <Link to="/merchant/menu" className="hover:text-grabGreen-700 transition duration-150">Quản lý Menu</Link>
                             <Link to="/merchant/revenue" className="hover:text-grabGreen-700 transition duration-150">Doanh thu</Link>
                         </>

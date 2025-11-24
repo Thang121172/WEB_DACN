@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/http';
 import { useAuthContext } from '../context/AuthContext';
+import { useToast } from '../components/Toast';
 
 // ===================================
 // Kiểu dữ liệu
@@ -10,6 +11,7 @@ interface CartItem {
   id: number;
   product_name: string;
   store_name: string;
+  merchant_id?: number; // ID của merchant
   price: number;
   quantity: number;
   image_url: string;
@@ -45,19 +47,22 @@ const CartItemCard: React.FC<{
   onUpdateQuantity: (id: number, newQuantity: number) => void;
   onRemove: (id: number) => void;
 }> = ({ item, onUpdateQuantity, onRemove }) => {
+  const { showToast } = useToast();
+  
   const handleQuantityChange = (delta: number) => {
     const newQuantity = item.quantity + delta;
     if (newQuantity >= 1) {
       onUpdateQuantity(item.id, newQuantity);
     } else {
-      if (
-        window.confirm(
-          `Bạn có chắc chắn muốn xóa "${item.product_name}" khỏi giỏ hàng?`
-        )
-      ) {
-        onRemove(item.id);
-      }
+      // Xóa luôn và hiển thị toast
+      onRemove(item.id);
+      showToast(`Đã xóa "${item.product_name}" khỏi giỏ hàng`, 'info');
     }
+  };
+
+  const handleRemove = () => {
+    onRemove(item.id);
+    showToast(`Đã xóa "${item.product_name}" khỏi giỏ hàng`, 'info');
   };
 
   return (
@@ -107,7 +112,7 @@ const CartItemCard: React.FC<{
         </div>
 
         <button
-          onClick={() => onRemove(item.id)}
+          onClick={handleRemove}
           className="text-xs text-red-500 hover:text-red-700 transition duration-150 font-medium"
         >
           Xóa
@@ -181,6 +186,7 @@ const CartSummaryCard: React.FC<{
 export default function CartPage() {
   const { isAuthenticated } = useAuthContext();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -208,6 +214,18 @@ export default function CartPage() {
     // Nếu muốn khóa với user chưa login:
     // if (!isAuthenticated) { navigate('/login'); return; }
     fetchCartData();
+    
+    // Listen for cart updates from other pages
+    const handleCartUpdate = () => {
+      console.log('🔄 Cart updated event received, refreshing cart...');
+      fetchCartData();
+    };
+    
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
   }, []);
 
   // Tính toán tổng tiền
@@ -251,12 +269,12 @@ export default function CartPage() {
 
   const handleCheckout = () => {
     if (cartItems.length === 0) {
-      alert('Giỏ hàng trống! Vui lòng thêm sản phẩm.');
+      showToast('Giỏ hàng trống! Vui lòng thêm sản phẩm.', 'warning');
       return;
     }
 
     // Truyền tóm tắt đơn hàng sang trang thanh toán
-    navigate('/payment', { state: { summary: cartSummary } });
+    navigate('/checkout');
   };
 
   // Loading state

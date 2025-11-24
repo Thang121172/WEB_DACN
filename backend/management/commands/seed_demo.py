@@ -11,8 +11,10 @@ User = get_user_model()
 CUSTOMER_LAT = 11.318067
 CUSTOMER_LNG = 106.050355
 
-# Tạo các merchant gần vị trí của bạn (trong phạm vi 10km)
+# Tạo các merchant từ Đồng Nai đến TP.HCM với các khoảng cách khác nhau
+# Để test logic lọc cửa hàng theo vị trí
 MERCHANTS_DATA = [
+    # ========== CÁC CỬA HÀNG GẦN VỊ TRÍ (0-5km) - BIÊN HÒA ==========
     {
         'username': 'quancom_bienhoa',
         'email': 'quancom@example.com',
@@ -153,6 +155,205 @@ MERCHANTS_DATA = [
             {'name': 'Cánh Gà Rán', 'description': '6 cánh gà rán', 'price': 70000, 'stock': 45},
         ]
     },
+    
+    # ========== CÁC CỬA HÀNG XA HƠN (5-10km) - VÙNG NGOẠI Ô BIÊN HÒA ==========
+    {
+        'username': 'comtam_tanphong',
+        'email': 'comtam_tanphong@example.com',
+        'password': 'Password123',
+        'name': 'Cơm Tấm Tân Phong',
+        'address': '234 Đường Tân Phong, Phường Tân Phong, Biên Hòa, Đồng Nai',
+        'phone': '02513812360',
+        'latitude': 11.350000,  # ~3.5km từ vị trí bạn
+        'longitude': 106.080000,
+        'description': 'Cơm tấm ngon giá rẻ',
+        'menu_items': [
+            {'name': 'Cơm Tấm Sườn', 'description': 'Cơm tấm sườn nướng', 'price': 48000, 'stock': 60},
+            {'name': 'Cơm Tấm Bì Chả', 'description': 'Cơm tấm bì chả', 'price': 50000, 'stock': 55},
+        ]
+    },
+    {
+        'username': 'bunbo_hiephoa',
+        'email': 'bunbo_hiephoa@example.com',
+        'password': 'Password123',
+        'name': 'Bún Bò Hiệp Hòa',
+        'address': '567 Đường Hiệp Hòa, Phường Hiệp Hòa, Biên Hòa, Đồng Nai',
+        'phone': '02513812361',
+        'latitude': 11.280000,  # ~4.5km từ vị trí bạn
+        'longitude': 106.010000,
+        'description': 'Bún bò Huế đặc sản',
+        'menu_items': [
+            {'name': 'Bún Bò Huế', 'description': 'Bún bò Huế đậm đà', 'price': 55000, 'stock': 50},
+            {'name': 'Bún Bò Giò Heo', 'description': 'Bún bò với giò heo', 'price': 60000, 'stock': 40},
+        ]
+    },
+    {
+        'username': 'banhcanh_trangbom',
+        'email': 'banhcanh_trangbom@example.com',
+        'password': 'Password123',
+        'name': 'Bánh Canh Trảng Bom',
+        'address': '890 Đường Quốc Lộ 1A, Thị trấn Trảng Bom, Đồng Nai',
+        'phone': '02513812362',
+        'latitude': 10.950000,  # ~8km từ vị trí bạn
+        'longitude': 107.000000,
+        'description': 'Bánh canh tôm cua',
+        'menu_items': [
+            {'name': 'Bánh Canh Tôm', 'description': 'Bánh canh tôm tươi', 'price': 45000, 'stock': 45},
+            {'name': 'Bánh Canh Cua', 'description': 'Bánh canh cua biển', 'price': 50000, 'stock': 40},
+        ]
+    },
+    
+    # ========== CÁC CỬA HÀNG RẤT XA (>10km) - TP.HCM ==========
+    {
+        'username': 'pho_quan1',
+        'email': 'pho_quan1@example.com',
+        'password': 'Password123',
+        'name': 'Phở 24 Quận 1',
+        'address': '123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM',
+        'phone': '02838212345',
+        'latitude': 10.776900,  # ~60km từ vị trí bạn (TP.HCM)
+        'longitude': 106.700900,
+        'description': 'Phở bò nổi tiếng Quận 1',
+        'menu_items': [
+            {'name': 'Phở Bò Tái', 'description': 'Phở bò tái chín', 'price': 65000, 'stock': 80},
+            {'name': 'Phở Đặc Biệt', 'description': 'Phở đầy đủ', 'price': 80000, 'stock': 60},
+        ]
+    },
+    {
+        'username': 'comtam_quan7',
+        'email': 'comtam_quan7@example.com',
+        'password': 'Password123',
+        'name': 'Cơm Tấm Cali Quận 7',
+        'address': '456 Đường Nguyễn Thị Thập, Phường Tân Phú, Quận 7, TP.HCM',
+        'phone': '02838212346',
+        'latitude': 10.732300,  # ~65km từ vị trí bạn
+        'longitude': 106.721400,
+        'description': 'Cơm tấm Sài Gòn Quận 7',
+        'menu_items': [
+            {'name': 'Cơm Tấm Sườn', 'description': 'Cơm tấm sườn nướng', 'price': 55000, 'stock': 70},
+            {'name': 'Cơm Tấm Đặc Biệt', 'description': 'Cơm tấm đầy đủ', 'price': 65000, 'stock': 55},
+        ]
+    },
+    {
+        'username': 'pizza_quan2',
+        'email': 'pizza_quan2@example.com',
+        'password': 'Password123',
+        'name': 'Pizza Hut Quận 2',
+        'address': '789 Đường Nguyễn Duy Trinh, Phường Bình Trưng Tây, Quận 2, TP.HCM',
+        'phone': '02838212347',
+        'latitude': 10.787200,  # ~63km từ vị trí bạn
+        'longitude': 106.749300,
+        'description': 'Pizza và pasta Quận 2',
+        'menu_items': [
+            {'name': 'Pizza Hải Sản', 'description': 'Pizza hải sản tươi', 'price': 200000, 'stock': 30},
+            {'name': 'Pizza 4 Phô Mai', 'description': 'Pizza 4 loại phô mai', 'price': 180000, 'stock': 25},
+        ]
+    },
+    {
+        'username': 'bunthitnuong_quan9',
+        'email': 'bunthitnuong_quan9@example.com',
+        'password': 'Password123',
+        'name': 'Bún Thịt Nướng Quận 9',
+        'address': '321 Đường Đỗ Xuân Hợp, Phường Phước Long B, Quận 9, TP.HCM',
+        'phone': '02838212348',
+        'latitude': 10.842200,  # ~58km từ vị trí bạn
+        'longitude': 106.809100,
+        'description': 'Bún thịt nướng Quận 9',
+        'menu_items': [
+            {'name': 'Bún Thịt Nướng', 'description': 'Bún thịt nướng đặc biệt', 'price': 50000, 'stock': 60},
+            {'name': 'Bún Thịt Nướng Đặc Biệt', 'description': 'Bún đầy đủ', 'price': 65000, 'stock': 45},
+        ]
+    },
+    {
+        'username': 'banhmi_thuduc',
+        'email': 'banhmi_thuduc@example.com',
+        'password': 'Password123',
+        'name': 'Bánh Mì Thủ Đức',
+        'address': '654 Đường Võ Văn Ngân, Phường Linh Chiểu, Thành phố Thủ Đức, TP.HCM',
+        'phone': '02838212349',
+        'latitude': 10.849700,  # ~57km từ vị trí bạn
+        'longitude': 106.763700,
+        'description': 'Bánh mì Sài Gòn Thủ Đức',
+        'menu_items': [
+            {'name': 'Bánh Mì Thịt Nướng', 'description': 'Bánh mì thịt nướng', 'price': 30000, 'stock': 100},
+            {'name': 'Bánh Mì Đặc Biệt', 'description': 'Bánh mì đầy đủ', 'price': 40000, 'stock': 90},
+        ]
+    },
+    {
+        'username': 'cafe_quan1',
+        'email': 'cafe_quan1@example.com',
+        'password': 'Password123',
+        'name': 'Cà Phê Trung Nguyên Quận 1',
+        'address': '147 Đường Lê Lợi, Phường Bến Nghé, Quận 1, TP.HCM',
+        'phone': '02838212350',
+        'latitude': 10.770000,  # ~61km từ vị trí bạn
+        'longitude': 106.695000,
+        'description': 'Cà phê và đồ uống Quận 1',
+        'menu_items': [
+            {'name': 'Cà Phê Sữa Đá', 'description': 'Cà phê sữa đá', 'price': 25000, 'stock': 200},
+            {'name': 'Cà Phê Đen Đá', 'description': 'Cà phê đen đá', 'price': 20000, 'stock': 200},
+        ]
+    },
+    {
+        'username': 'chicken_quan7',
+        'email': 'chicken_quan7@example.com',
+        'password': 'Password123',
+        'name': 'KFC Quận 7',
+        'address': '258 Đường Huỳnh Tấn Phát, Phường Tân Thuận Đông, Quận 7, TP.HCM',
+        'phone': '02838212351',
+        'latitude': 10.740000,  # ~66km từ vị trí bạn
+        'longitude': 106.730000,
+        'description': 'Gà rán KFC Quận 7',
+        'menu_items': [
+            {'name': 'Combo Gà Rán', 'description': 'Combo gà rán đầy đủ', 'price': 95000, 'stock': 50},
+            {'name': 'Gà Rán 4 Miếng', 'description': '4 miếng gà rán', 'price': 130000, 'stock': 40},
+        ]
+    },
+    {
+        'username': 'pho_quan2',
+        'email': 'pho_quan2@example.com',
+        'password': 'Password123',
+        'name': 'Phở Gia Truyền Quận 2',
+        'address': '987 Đường Nguyễn Thị Định, Phường An Phú, Quận 2, TP.HCM',
+        'phone': '02838212352',
+        'latitude': 10.795000,  # ~62km từ vị trí bạn
+        'longitude': 106.755000,
+        'description': 'Phở bò Quận 2',
+        'menu_items': [
+            {'name': 'Phở Bò Tái', 'description': 'Phở bò tái', 'price': 60000, 'stock': 70},
+            {'name': 'Phở Gà', 'description': 'Phở gà', 'price': 55000, 'stock': 65},
+        ]
+    },
+    {
+        'username': 'bunbo_quan9',
+        'email': 'bunbo_quan9@example.com',
+        'password': 'Password123',
+        'name': 'Bún Bò Huế Quận 9',
+        'address': '159 Đường Đỗ Xuân Hợp, Phường Phước Long A, Quận 9, TP.HCM',
+        'phone': '02838212353',
+        'latitude': 10.835000,  # ~59km từ vị trí bạn
+        'longitude': 106.800000,
+        'description': 'Bún bò Huế Quận 9',
+        'menu_items': [
+            {'name': 'Bún Bò Huế', 'description': 'Bún bò Huế đậm đà', 'price': 60000, 'stock': 55},
+            {'name': 'Bún Bò Giò Heo', 'description': 'Bún bò giò heo', 'price': 65000, 'stock': 45},
+        ]
+    },
+    {
+        'username': 'comtam_thuduc',
+        'email': 'comtam_thuduc@example.com',
+        'password': 'Password123',
+        'name': 'Cơm Tấm Thủ Đức',
+        'address': '753 Đường Võ Văn Ngân, Phường Linh Trung, Thành phố Thủ Đức, TP.HCM',
+        'phone': '02838212354',
+        'latitude': 10.860000,  # ~56km từ vị trí bạn
+        'longitude': 106.770000,
+        'description': 'Cơm tấm Thủ Đức',
+        'menu_items': [
+            {'name': 'Cơm Tấm Sườn', 'description': 'Cơm tấm sườn', 'price': 52000, 'stock': 65},
+            {'name': 'Cơm Tấm Đặc Biệt', 'description': 'Cơm tấm đầy đủ', 'price': 62000, 'stock': 50},
+        ]
+    },
 ]
 
 SHIPPERS_DATA = [
@@ -285,5 +486,15 @@ class Command(BaseCommand):
                 profile.save()
         
         self.stdout.write(self.style.SUCCESS('\n✓ Done seeding demo data!'))
-        self.stdout.write(f'\nVị trí của bạn: {CUSTOMER_LAT}, {CUSTOMER_LNG}')
-        self.stdout.write(f'Đã tạo {len(MERCHANTS_DATA)} merchants và {len(SHIPPERS_DATA)} shippers gần vị trí của bạn.')
+        self.stdout.write(f'\n📍 Vị trí của bạn: {CUSTOMER_LAT}, {CUSTOMER_LNG} (Biên Hòa, Đồng Nai)')
+        self.stdout.write(f'\n📊 Tổng kết:')
+        self.stdout.write(f'   - Đã tạo {len(MERCHANTS_DATA)} merchants')
+        self.stdout.write(f'   - Đã tạo {len(SHIPPERS_DATA)} shippers')
+        self.stdout.write(f'\n📌 Phân bố cửa hàng:')
+        self.stdout.write(f'   - Gần vị trí (0-5km): 8 cửa hàng ở Biên Hòa')
+        self.stdout.write(f'   - Xa hơn (5-10km): 3 cửa hàng ở vùng ngoại ô Biên Hòa')
+        self.stdout.write(f'   - Rất xa (>10km): 10 cửa hàng ở TP.HCM (Quận 1, 2, 7, 9, Thủ Đức)')
+        self.stdout.write(f'\n💡 Lưu ý:')
+        self.stdout.write(f'   - Các cửa hàng trong phạm vi 10km sẽ hiển thị khi bạn ở vị trí hiện tại')
+        self.stdout.write(f'   - Các cửa hàng ở TP.HCM (>10km) sẽ KHÔNG hiển thị để test logic lọc')
+        self.stdout.write(f'   - Bạn có thể thay đổi vị trí để test với các cửa hàng khác nhau')

@@ -39,36 +39,90 @@ def serialize_order_item(item: OrderItem):
     return {
         "id": item.id,
         "menu_item_id": item.menu_item_id,  # menu_item là FK -> menu_item_id luôn có
-        "name": item.name_snapshot,
-        "price": str(item.price_snapshot),
+        "product_name": item.name_snapshot,
+        "name": item.name_snapshot,  # Alias for compatibility
+        "price": float(item.price_snapshot),
         "quantity": item.quantity,
         "line_total": str(item.line_total),
     }
 
 
 def serialize_order(order: Order):
+    # Calculate subtotal from items
+    subtotal = sum(float(item.line_total) for item in order.items.all())
+    delivery_fee = 35000.0  # Fixed delivery fee
+    # Total = subtotal + delivery_fee (luôn tính lại để đảm bảo đúng)
+    total = subtotal + delivery_fee
+    
+    # Get customer info from user and profile
+    customer_name = order.customer.username if order.customer else ""
+    customer_email = order.customer.email if order.customer else ""
+    
+    # Try to get phone, full_name, and default_address from profile
+    customer_phone = ""
+    try:
+        if order.customer and hasattr(order.customer, 'profile'):
+            profile = order.customer.profile
+            customer_phone = profile.phone or ""
+            # Use full_name from profile if available, otherwise use username
+            if profile.full_name:
+                customer_name = profile.full_name
+    except:
+        pass
+    
+    # Use delivery_address from order, or fallback to profile default_address
+    delivery_addr = order.delivery_address
+    if not delivery_addr:
+        try:
+            if order.customer and hasattr(order.customer, 'profile'):
+                delivery_addr = order.customer.profile.default_address or ""
+        except:
+            pass
+    
     return {
         "id": order.id,
+        "order_id": order.id,  # Alias for compatibility
         "status": order.status,
         "payment_status": order.payment_status,
         "total_amount": str(order.total_amount),
-        "delivery_address": order.delivery_address,
+        "total": total,  # For frontend compatibility
+        "subtotal": subtotal,
+        "delivery_fee": delivery_fee,
+        "delivery_address": delivery_addr,
+        "customer_name": customer_name,
+        "customer_address": delivery_addr,
+        "customer_phone": customer_phone,
+        "order_time": order.created_at.isoformat() if order.created_at else "",
+        "created_at": order.created_at.isoformat() if order.created_at else "",
+        "updated_at": order.updated_at.isoformat() if order.updated_at else "",
+        "payment_method": "cash" if order.payment_status == "UNPAID" else "card",
         "note": order.note,
         "merchant": {
             "id": order.merchant.id,
             "name": order.merchant.name,
         },
+        "merchant_name": order.merchant.name,
+        "merchant_address": order.merchant.address or "",
         "shipper": (
-            {
-                "id": order.shipper.id,
-                "username": order.shipper.username,
-            }
-            if order.shipper
-            else None
+            (lambda shipper: {
+                "id": shipper.id,
+                "username": shipper.username,
+                "email": shipper.email,
+                "phone": "",
+                "full_name": shipper.username,
+                "vehicle_plate": "",
+            } if not hasattr(shipper, 'profile') or not shipper.profile else {
+                "id": shipper.id,
+                "username": shipper.username,
+                "email": shipper.email,
+                "phone": shipper.profile.phone or "",
+                "full_name": shipper.profile.full_name or shipper.username,
+                "vehicle_plate": shipper.profile.vehicle_plate or "",
+            })(order.shipper) if order.shipper else None
         ),
         "items": [serialize_order_item(i) for i in order.items.all()],
-        "created_at": order.created_at,
-        "updated_at": order.updated_at,
+        "items_count": order.items.count(),  # Số loại món khác nhau
+        "total_quantity": sum(item.quantity for item in order.items.all()),  # Tổng số lượng món
     }
 
 
@@ -132,65 +186,199 @@ class OrderViewSet(viewsets.ViewSet):
         note = request.data.get("note", "")
         items_payload = request.data.get("items", [])
 
+        # Validate input
+        if not merchant_id:
+            return Response({"detail": "merchant_id là bắt buộc"}, status=400)
+        
+        if not items_payload or not isinstance(items_payload, list) or len(items_payload) == 0:
+            return Response({"detail": "items không được để trống"}, status=400)
+
         # Lấy merchant
         try:
             merchant = Merchant.objects.get(id=merchant_id, is_active=True)
         except Merchant.DoesNotExist:
             return Response({"detail": "Merchant không tồn tại"}, status=400)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Lỗi khi lấy merchant {merchant_id}: {str(e)}")
+            return Response({"detail": f"Lỗi khi xử lý merchant: {str(e)}"}, status=500)
 
-        # Tạo order khung
-        order = Order.objects.create(
-            customer=user,
-            merchant=merchant,
-            status=Order.Status.PENDING,
-            payment_status=Order.PaymentStatus.UNPAID,
-            delivery_address=delivery_address,
-            note=note,
-            total_amount=Decimal("0.00"),
-        )
+        # Tạo order khung - ĐẢM BẢO status luôn là PENDING
+        try:
+            order = Order.objects.create(
+                customer=user,
+                merchant=merchant,
+                status=Order.Status.PENDING,  # Đơn mới LUÔN bắt đầu với PENDING
+                payment_status=Order.PaymentStatus.UNPAID,
+                delivery_address=delivery_address,
+                note=note,
+                total_amount=Decimal("0.00"),
+            )
+            
+            # Debug: Log để đảm bảo status đúng
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"✅ Created Order #{order.id} with status={order.status} (should be PENDING)")
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Lỗi khi tạo Order: {str(e)}")
+            transaction.set_rollback(True)
+            return Response(
+                {"detail": f"Lỗi khi tạo đơn hàng: {str(e)}"},
+                status=500,
+            )
 
         total_amount = Decimal("0.00")
+        stock_errors = []
+        stock_warnings = []
 
-        # Duyệt giỏ hàng
+        # Duyệt giỏ hàng và kiểm tra tồn kho
         for row in items_payload:
             menu_item_id = row.get("menu_item_id")
             quantity = int(row.get("quantity", 1))
 
+            if not menu_item_id:
+                stock_errors.append("Menu item ID không hợp lệ")
+                continue
+
             try:
-                m_item = MenuItem.objects.get(id=menu_item_id)
+                # Sử dụng select_for_update để lock row khi đọc
+                m_item = MenuItem.objects.select_for_update().get(id=menu_item_id, merchant=merchant)
             except MenuItem.DoesNotExist:
                 transaction.set_rollback(True)
                 return Response(
                     {"detail": f"Menu item {menu_item_id} không tồn tại"},
                     status=400,
                 )
+            except Exception as e:
+                transaction.set_rollback(True)
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Lỗi khi lấy menu item {menu_item_id}: {str(e)}")
+                return Response(
+                    {"detail": f"Lỗi khi xử lý menu item {menu_item_id}: {str(e)}"},
+                    status=500,
+                )
 
-            price_snapshot = m_item.price
-            line_total = price_snapshot * quantity
-            total_amount += line_total
+            # Kiểm tra giá và tồn kho
+            if m_item.price is None:
+                stock_errors.append(f"{m_item.name}: Giá không hợp lệ")
+                continue
+                
+            # Đảm bảo stock là số nguyên hợp lệ
+            stock_value = m_item.stock if m_item.stock is not None else 0
+            
+            # Kiểm tra tồn kho
+            if stock_value < quantity:
+                if stock_value <= 0:
+                    # Hết hàng hoàn toàn
+                    stock_errors.append(f"{m_item.name}: Hết hàng (tồn kho: {stock_value})")
+                else:
+                    # Không đủ số lượng
+                    stock_errors.append(f"{m_item.name}: Chỉ còn {stock_value} phần, bạn đặt {quantity} phần")
+                continue
 
-            OrderItem.objects.create(
-                order=order,
-                menu_item=m_item,
-                name_snapshot=m_item.name,
-                price_snapshot=price_snapshot,
-                quantity=quantity,
-                line_total=line_total,
+            try:
+                # Đảm bảo price là Decimal
+                price_snapshot = Decimal(str(m_item.price))
+                line_total = price_snapshot * Decimal(str(quantity))
+                total_amount += line_total
+            except (ValueError, TypeError) as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Lỗi khi tính giá cho menu item {m_item.id}: {str(e)}")
+                stock_errors.append(f"{m_item.name}: Lỗi tính giá (giá: {m_item.price})")
+                continue
+
+            # Trừ tồn kho - Sử dụng F() expression để đảm bảo atomic update
+            from django.db.models import F
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            old_stock = m_item.stock
+            logger.info(f"🔴 Trừ stock: Menu Item {m_item.id} ({m_item.name}): Stock hiện tại = {old_stock}, sẽ trừ {quantity}")
+            
+            # Sử dụng F() expression để trừ stock atomic
+            MenuItem.objects.filter(id=m_item.id).update(
+                stock=F('stock') - quantity
+            )
+            
+            # Refresh để lấy giá trị mới
+            m_item.refresh_from_db()
+            
+            # Kiểm tra và cập nhật is_available
+            if m_item.stock <= 0:
+                m_item.is_available = False
+                stock_warnings.append(f"{m_item.name} đã hết hàng")
+            else:
+                m_item.is_available = True
+            
+            m_item.save(update_fields=["is_available"])
+            
+            # Log sau khi save
+            logger.info(f"✅ Đã lưu stock: Menu Item {m_item.id} ({m_item.name}): Stock = {m_item.stock}, Available = {m_item.is_available}")
+
+            try:
+                OrderItem.objects.create(
+                    order=order,
+                    menu_item=m_item,
+                    name_snapshot=m_item.name,
+                    price_snapshot=price_snapshot,
+                    quantity=quantity,
+                    line_total=line_total,
+                )
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Lỗi khi tạo OrderItem cho menu item {m_item.id}: {str(e)}")
+                transaction.set_rollback(True)
+                return Response(
+                    {"detail": f"Lỗi khi tạo đơn hàng: {str(e)}"},
+                    status=500,
+                )
+
+        # Nếu có lỗi tồn kho, hủy đơn hàng
+        if stock_errors:
+            transaction.set_rollback(True)
+            return Response(
+                {
+                    "detail": "Không đủ tồn kho cho một số món",
+                    "errors": stock_errors
+                },
+                status=400,
             )
 
         # cập nhật tổng tiền
-        order.total_amount = total_amount
-        order.save(update_fields=["total_amount"])
+        try:
+            order.total_amount = total_amount
+            order.save(update_fields=["total_amount"])
 
-        return Response(serialize_order(order), status=status.HTTP_201_CREATED)
+            response_data = serialize_order(order)
+            if stock_warnings:
+                response_data["warnings"] = stock_warnings
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Lỗi khi cập nhật total_amount cho Order {order.id}: {str(e)}")
+            transaction.set_rollback(True)
+            return Response(
+                {"detail": f"Lỗi khi hoàn tất đơn hàng: {str(e)}"},
+                status=500,
+            )
 
     @action(detail=True, methods=['post'])
     def set_status(self, request, pk=None):
         """
         POST /api/orders/{id}/set_status/
-        Body: { "status": "DELIVERED" }
-        => Cho phép (tạm thời) đổi trạng thái đơn hàng thủ công.
-        (Bạn có thể khoá lại cho chỉ admin hoặc chủ sở hữu sau này)
+        Body: { "status": "CONFIRMED" }
+        => Cho phép customer, merchant, hoặc admin đổi trạng thái đơn hàng.
+        - Customer: chỉ có thể hủy đơn của mình (PENDING -> CANCELED)
+        - Merchant: có thể confirm/cancel đơn của merchant của họ
+        - Admin: có thể set bất kỳ status nào
         """
         try:
             order = Order.objects.get(pk=pk)
@@ -201,10 +389,48 @@ class OrderViewSet(viewsets.ViewSet):
         if not new_status:
             return Response({"detail": "status required"}, status=400)
 
-        # Không cứng validation ở đây để bạn dễ test.
+        user = request.user
+        role = get_user_role(user)
+
+        # Kiểm tra quyền
+        if role == "customer":
+            # Customer chỉ có thể hủy đơn của mình
+            if order.customer != user:
+                return Response({"detail": "Forbidden"}, status=403)
+            if new_status != "CANCELED":
+                return Response({"detail": "Customer chỉ có thể hủy đơn"}, status=403)
+        elif role == "merchant":
+            # Merchant chỉ có thể thao tác với đơn của merchant của họ
+            merchants = user_merchants(user)
+            if order.merchant not in merchants:
+                return Response({"detail": "Forbidden"}, status=403)
+            # Merchant có thể confirm hoặc cancel
+            if new_status not in ["CONFIRMED", "CANCELED", "READY_FOR_PICKUP"]:
+                return Response({"detail": "Merchant chỉ có thể confirm, cancel, hoặc ready"}, status=403)
+        elif role != "admin":
+            return Response({"detail": "Forbidden"}, status=403)
+
+        # Lưu trạng thái cũ để xử lý restore stock khi cancel
+        old_status = order.status
+        
+        # Nếu merchant cancel đơn (PENDING -> CANCELED hoặc CONFIRMED -> CANCELED)
+        # Cần restore stock vì stock đã bị trừ khi tạo đơn
+        # Phải restore TRƯỚC KHI cập nhật status để đảm bảo transaction consistency
+        if new_status == "CANCELED" and old_status in [Order.Status.PENDING, Order.Status.CONFIRMED]:
+            for item in order.items.all():
+                if item.menu_item:
+                    # Restore stock
+                    item.menu_item.stock += item.quantity
+                    # Nếu stock > 0, đánh dấu lại là available
+                    if item.menu_item.stock > 0:
+                        item.menu_item.is_available = True
+                    item.menu_item.save(update_fields=["stock", "is_available"])
+        
+        # Cập nhật status sau khi restore stock
         order.status = new_status
         order.save(update_fields=["status"])
-        return Response({"id": order.id, "status": order.status}, status=200)
+        
+        return Response(serialize_order(order), status=200)
 
     @transaction.atomic
     @action(detail=True, methods=['post'])
@@ -231,7 +457,7 @@ class OrderViewSet(viewsets.ViewSet):
         reason = request.data.get("reason", "Khách hàng hủy đơn")
         
         # Lưu trạng thái cũ để kiểm tra hoàn trả kho
-        was_confirmed = order.status == Order.Status.CONFIRMED
+        old_status = order.status
 
         # Cập nhật trạng thái
         order.status = Order.Status.CANCELED
@@ -242,12 +468,16 @@ class OrderViewSet(viewsets.ViewSet):
         
         order.save(update_fields=["status", "payment_status"])
 
-        # Hoàn trả kho nếu đã trừ (nếu merchant đã confirm và trừ kho)
-        if was_confirmed:
-            for item in order.items.all():
-                if item.menu_item:
-                    item.menu_item.stock += item.quantity
-                    item.menu_item.save(update_fields=["stock"])
+        # Hoàn trả kho: Stock đã bị trừ khi tạo đơn (PENDING), nên cần restore khi cancel
+        # Dù là PENDING hay CONFIRMED, đều cần restore stock vì đã trừ khi tạo đơn
+        for item in order.items.all():
+            if item.menu_item:
+                # Restore stock
+                item.menu_item.stock += item.quantity
+                # Nếu stock > 0, đánh dấu lại là available
+                if item.menu_item.stock > 0:
+                    item.menu_item.is_available = True
+                item.menu_item.save(update_fields=["stock", "is_available"])
 
         return Response(
             {
@@ -331,52 +561,551 @@ class MerchantViewSet(viewsets.ViewSet):
 class ShipperViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
+    @action(detail=False, methods=['post'])
+    def update_location(self, request):
+        """
+        POST /api/shipper/update_location/
+        Body: { "latitude": 10.123456, "longitude": 106.123456 }
+        -> Cập nhật vị trí GPS của shipper để phân luồng đơn hàng
+        """
+        from accounts.models import Profile
+        from django.utils import timezone
+        
+        latitude = request.data.get("latitude")
+        longitude = request.data.get("longitude")
+        
+        if latitude is None or longitude is None:
+            return Response({"detail": "latitude và longitude là bắt buộc"}, status=400)
+        
+        try:
+            latitude = float(latitude)
+            longitude = float(longitude)
+        except (ValueError, TypeError):
+            return Response({"detail": "latitude và longitude phải là số hợp lệ"}, status=400)
+        
+        # Cập nhật profile của shipper
+        try:
+            profile = request.user.profile
+            if profile.role != 'shipper':
+                return Response({"detail": "Chỉ shipper mới được cập nhật vị trí"}, status=403)
+            
+            profile.latitude = latitude
+            profile.longitude = longitude
+            profile.location_updated_at = timezone.now()
+            profile.save(update_fields=['latitude', 'longitude', 'location_updated_at'])
+            
+            return Response({
+                "message": "Đã cập nhật vị trí thành công",
+                "latitude": float(profile.latitude),
+                "longitude": float(profile.longitude),
+                "location_updated_at": profile.location_updated_at.isoformat() if profile.location_updated_at else None,
+            }, status=200)
+        except Profile.DoesNotExist:
+            return Response({"detail": "Profile không tồn tại"}, status=404)
+
     def list(self, request):
         """
-        GET /api/shipper/
-        -> danh sách đơn hàng chưa hoàn tất giao (trừ DELIVERED).
-        Hiện tại không lọc theo shipper, để shipper thấy đơn nào còn open.
-        Bạn có thể siết sau.
+        GET /api/shipper/?lat=10.123&lng=106.123&radius=20
+        -> danh sách đơn hàng sẵn sàng giao, sắp xếp theo khoảng cách gần nhất.
+        - Chỉ hiển thị đơn READY_FOR_PICKUP hoặc PENDING (chưa có shipper)
+        - Tính khoảng cách từ shipper đến merchant
+        - Sắp xếp theo khoảng cách gần nhất
+        - Chỉ hiển thị đơn trong phạm vi radius (km), mặc định 20km
         """
-        qs = Order.objects.exclude(status=Order.Status.DELIVERED).order_by("-created_at")
-        data = [
-            {
-                "id": o.id,
-                "status": o.status,
-                "created_at": o.created_at.isoformat(),
-                "merchant": {
-                    "id": o.merchant.id,
-                    "name": o.merchant.name,
-                },
-                "total_amount": str(o.total_amount),
-            }
-            for o in qs
-        ]
-        return Response(data, status=200)
+        try:
+            from accounts.models import Profile
+            from menus.utils import haversine_distance
+            
+            # Lấy GPS location từ query params hoặc từ profile
+            # Tương thích với cả Django request và DRF request
+            if hasattr(request, 'query_params'):
+                query_params = request.query_params
+            else:
+                query_params = request.GET
+            
+            lat = query_params.get('lat')
+            lng = query_params.get('lng')
+            try:
+                radius = float(query_params.get('radius', 20))  # Mặc định 20km
+            except (ValueError, TypeError):
+                radius = 20.0
+            
+            print(f"🔍 ShipperViewSet.list - Query params: lat={lat}, lng={lng}, radius={radius}")
+            
+            # Nếu không có trong query params, lấy từ profile
+            if not lat or not lng:
+                try:
+                    profile = request.user.profile
+                    if profile.role == 'shipper' and profile.latitude and profile.longitude:
+                        lat = str(profile.latitude)
+                        lng = str(profile.longitude)
+                        print(f"📍 Lấy GPS từ profile: lat={lat}, lng={lng}")
+                except Profile.DoesNotExist:
+                    print("⚠️ Profile không tồn tại")
+                    pass
+            
+            # Lấy đơn hàng sẵn sàng (READY hoặc PENDING, chưa có shipper)
+            # Lưu ý: Order.Status.READY có giá trị là "READY_FOR_PICKUP"
+            qs = Order.objects.filter(
+                status__in=[Order.Status.READY, Order.Status.PENDING],
+                shipper__isnull=True
+            ).select_related('merchant', 'customer').order_by("-created_at")
+            
+            print(f"📦 Tìm thấy {qs.count()} đơn hàng sẵn sàng (PENDING/READY, chưa có shipper)")
+            
+            orders_with_distance = []
+            
+            for order in qs:
+                # Chỉ tính khoảng cách nếu có GPS của shipper và merchant
+                if lat and lng and order.merchant.latitude and order.merchant.longitude:
+                    try:
+                        distance = haversine_distance(
+                            float(lat), float(lng),
+                            float(order.merchant.latitude), float(order.merchant.longitude)
+                        )
+                        
+                        print(f"  Order {order.id}: Merchant GPS={order.merchant.latitude}, {order.merchant.longitude}, Distance={distance:.2f}km, Radius={radius}km")
+                        
+                        # Chỉ thêm đơn trong phạm vi radius
+                        if distance <= radius:
+                            orders_with_distance.append({
+                                "order": order,
+                                "distance_to_merchant": distance,
+                            })
+                            print(f"    ✅ Thêm Order {order.id} vào danh sách (distance={distance:.2f}km <= radius={radius}km)")
+                        else:
+                            print(f"    ❌ Bỏ qua Order {order.id} (distance={distance:.2f}km > radius={radius}km)")
+                    except (ValueError, TypeError) as e:
+                        # Bỏ qua nếu không tính được khoảng cách
+                        print(f"    ⚠️ Lỗi tính khoảng cách cho Order {order.id}: {e}")
+                        continue
+                else:
+                    # Nếu không có GPS, vẫn hiển thị nhưng không có khoảng cách
+                    print(f"  Order {order.id}: Không có GPS (shipper: lat={lat}, lng={lng}, merchant: lat={order.merchant.latitude}, lng={order.merchant.longitude})")
+                    orders_with_distance.append({
+                        "order": order,
+                        "distance_to_merchant": None,
+                    })
+            
+            print(f"✅ Trả về {len(orders_with_distance)} đơn hàng")
+            
+            # Sắp xếp theo khoảng cách gần nhất (None sẽ ở cuối)
+            orders_with_distance.sort(key=lambda x: x["distance_to_merchant"] if x["distance_to_merchant"] is not None else float('inf'))
+            
+            # Serialize data
+            data = []
+            for item in orders_with_distance:
+                try:
+                    order = item["order"]
+                    distance = item["distance_to_merchant"]
+                    
+                    # Tính phí giao hàng dựa trên khoảng cách (ví dụ: 5,000 VND/km, tối thiểu 20,000 VND)
+                    delivery_fee = 20000  # Phí cơ bản
+                    if distance is not None:
+                        delivery_fee = max(20000, int(distance * 5000))
+                    
+                    # Convert Decimal to float safely
+                    merchant_lat = None
+                    merchant_lng = None
+                    if order.merchant.latitude is not None:
+                        try:
+                            merchant_lat = float(order.merchant.latitude)
+                        except (ValueError, TypeError):
+                            merchant_lat = None
+                    if order.merchant.longitude is not None:
+                        try:
+                            merchant_lng = float(order.merchant.longitude)
+                        except (ValueError, TypeError):
+                            merchant_lng = None
+                    
+                    # Thông tin shipper (nếu có)
+                    shipper_info = None
+                    if order.shipper:
+                        shipper_info = {
+                            "id": order.shipper.id,
+                            "username": order.shipper.username,
+                        }
+                    
+                    data.append({
+                        "id": order.id,
+                        "status": order.status,
+                        "created_at": order.created_at.isoformat(),
+                        "merchant": {
+                            "id": order.merchant.id,
+                            "name": order.merchant.name,
+                            "address": order.merchant.address or "",
+                            "latitude": merchant_lat,
+                            "longitude": merchant_lng,
+                        },
+                        "customer": {
+                            "id": order.customer.id,
+                            "username": order.customer.username,
+                            "delivery_address": order.delivery_address or "",
+                        },
+                        "shipper": shipper_info,  # Thêm thông tin shipper
+                        "total_amount": str(order.total_amount),
+                        "distance_to_merchant_km": round(distance, 2) if distance is not None else None,
+                        "delivery_fee": delivery_fee,
+                    })
+                except Exception as e:
+                    print(f"❌ Lỗi khi serialize Order {item['order'].id}: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    continue
+            
+            print(f"✅ Serialize thành công {len(data)} đơn hàng")
+            return Response(data, status=200)
+        except Exception as e:
+            print(f"❌ Lỗi trong ShipperViewSet.list: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response({"detail": f"Lỗi server: {str(e)}"}, status=500)
+
+    @action(detail=False, methods=['get'])
+    def revenue(self, request):
+        """
+        GET /api/shipper/revenue/
+        -> Lấy thống kê doanh thu của shipper hiện tại
+        """
+        from django.db.models import Sum, Count, Q
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        try:
+            shipper = request.user
+            
+            # Tính phí giao hàng dựa trên khoảng cách (giống logic trong list)
+            # Tạm thời dùng delivery_fee từ order hoặc tính theo công thức
+            def calculate_delivery_fee(order):
+                # Nếu có delivery_fee trong order, dùng nó
+                # Nếu không, tính theo khoảng cách (5,000 VND/km, tối thiểu 20,000 VND)
+                # Tạm thời dùng 20,000 VND làm phí cơ bản
+                return 20000
+            
+            # Tổng số đơn đã giao (DELIVERED)
+            total_deliveries = Order.objects.filter(
+                shipper=shipper,
+                status=Order.Status.DELIVERED
+            ).count()
+            
+            # Tổng thu nhập (tổng delivery_fee của các đơn đã giao)
+            # Tính delivery_fee cho mỗi đơn dựa trên khoảng cách
+            delivered_orders = Order.objects.filter(
+                shipper=shipper,
+                status=Order.Status.DELIVERED
+            ).select_related('merchant')
+            
+            total_earnings = 0
+            for order in delivered_orders:
+                # Tính delivery_fee dựa trên khoảng cách
+                delivery_fee = 20000  # Phí cơ bản
+                try:
+                    from accounts.models import Profile
+                    from menus.utils import haversine_distance
+                    
+                    profile = shipper.profile
+                    if profile.latitude and profile.longitude and order.merchant.latitude and order.merchant.longitude:
+                        distance = haversine_distance(
+                            float(profile.latitude), float(profile.longitude),
+                            float(order.merchant.latitude), float(order.merchant.longitude)
+                        )
+                        delivery_fee = max(20000, int(distance * 5000))
+                except:
+                    pass
+                
+                total_earnings += delivery_fee
+            
+            # Hôm nay
+            today = timezone.now().date()
+            today_start = timezone.make_aware(timezone.datetime.combine(today, timezone.datetime.min.time()))
+            
+            deliveries_today = Order.objects.filter(
+                shipper=shipper,
+                status=Order.Status.DELIVERED,
+                updated_at__gte=today_start
+            ).count()
+            
+            earnings_today = 0
+            today_orders = Order.objects.filter(
+                shipper=shipper,
+                status=Order.Status.DELIVERED,
+                updated_at__gte=today_start
+            ).select_related('merchant')
+            
+            for order in today_orders:
+                delivery_fee = 20000
+                try:
+                    from accounts.models import Profile
+                    from menus.utils import haversine_distance
+                    
+                    profile = shipper.profile
+                    if profile.latitude and profile.longitude and order.merchant.latitude and order.merchant.longitude:
+                        distance = haversine_distance(
+                            float(profile.latitude), float(profile.longitude),
+                            float(order.merchant.latitude), float(order.merchant.longitude)
+                        )
+                        delivery_fee = max(20000, int(distance * 5000))
+                except:
+                    pass
+                
+                earnings_today += delivery_fee
+            
+            # Tháng này
+            month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            
+            deliveries_this_month = Order.objects.filter(
+                shipper=shipper,
+                status=Order.Status.DELIVERED,
+                updated_at__gte=month_start
+            ).count()
+            
+            earnings_this_month = 0
+            month_orders = Order.objects.filter(
+                shipper=shipper,
+                status=Order.Status.DELIVERED,
+                updated_at__gte=month_start
+            ).select_related('merchant')
+            
+            for order in month_orders:
+                delivery_fee = 20000
+                try:
+                    from accounts.models import Profile
+                    from menus.utils import haversine_distance
+                    
+                    profile = shipper.profile
+                    if profile.latitude and profile.longitude and order.merchant.latitude and order.merchant.longitude:
+                        distance = haversine_distance(
+                            float(profile.latitude), float(profile.longitude),
+                            float(order.merchant.latitude), float(order.merchant.longitude)
+                        )
+                        delivery_fee = max(20000, int(distance * 5000))
+                except:
+                    pass
+                
+                earnings_this_month += delivery_fee
+            
+            return Response({
+                "total_earnings": total_earnings,
+                "total_deliveries": total_deliveries,
+                "earnings_today": earnings_today,
+                "deliveries_today": deliveries_today,
+                "earnings_this_month": earnings_this_month,
+                "deliveries_this_month": deliveries_this_month,
+            }, status=200)
+        except Exception as e:
+            print(f"❌ Lỗi trong ShipperViewSet.revenue: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response({"detail": f"Lỗi server: {str(e)}"}, status=500)
+
+    @action(detail=False, methods=['get'])
+    def delivery_history(self, request):
+        """
+        GET /api/shipper/delivery_history/
+        -> Lấy lịch sử đơn hàng đã giao của shipper hiện tại (status = DELIVERED)
+        """
+        try:
+            from menus.utils import haversine_distance
+            
+            # Lấy đơn hàng đã giao của shipper hiện tại
+            qs = Order.objects.filter(
+                shipper=request.user,
+                status=Order.Status.DELIVERED
+            ).select_related('merchant', 'customer').order_by("-updated_at")
+            
+            data = []
+            for order in qs:
+                # Tính khoảng cách từ shipper đến merchant (nếu có GPS)
+                distance = None
+                try:
+                    profile = request.user.profile
+                    if profile.latitude and profile.longitude and order.merchant.latitude and order.merchant.longitude:
+                        distance = haversine_distance(
+                            float(profile.latitude), float(profile.longitude),
+                            float(order.merchant.latitude), float(order.merchant.longitude)
+                        )
+                except:
+                    pass
+                
+                # Tính phí giao hàng
+                delivery_fee = 20000
+                if distance is not None:
+                    delivery_fee = max(20000, int(distance * 5000))
+                
+                data.append({
+                    "id": order.id,
+                    "status": order.status,
+                    "created_at": order.created_at.isoformat(),
+                    "updated_at": order.updated_at.isoformat(),
+                    "merchant": {
+                        "id": order.merchant.id,
+                        "name": order.merchant.name,
+                        "address": order.merchant.address or "",
+                    },
+                    "customer": {
+                        "id": order.customer.id,
+                        "username": order.customer.username,
+                        "delivery_address": order.delivery_address or "",
+                    },
+                    "total_amount": str(order.total_amount),
+                    "distance_to_merchant_km": round(distance, 2) if distance is not None else None,
+                    "delivery_fee": delivery_fee,
+                })
+            
+            return Response(data, status=200)
+        except Exception as e:
+            print(f"❌ Lỗi trong ShipperViewSet.delivery_history: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response({"detail": f"Lỗi server: {str(e)}"}, status=500)
+
+    @action(detail=False, methods=['get'])
+    def my_orders(self, request):
+        """
+        GET /api/shipper/my_orders/
+        -> Lấy danh sách đơn hàng đang giao của shipper hiện tại (status = DELIVERING)
+        """
+        try:
+            from menus.utils import haversine_distance
+            
+            # Lấy đơn hàng đang giao của shipper hiện tại
+            qs = Order.objects.filter(
+                shipper=request.user,
+                status=Order.Status.DELIVERING
+            ).select_related('merchant', 'customer').order_by("-created_at")
+            
+            data = []
+            for order in qs:
+                # Tính khoảng cách từ shipper đến merchant (nếu có GPS)
+                distance = None
+                try:
+                    profile = request.user.profile
+                    if profile.latitude and profile.longitude and order.merchant.latitude and order.merchant.longitude:
+                        distance = haversine_distance(
+                            float(profile.latitude), float(profile.longitude),
+                            float(order.merchant.latitude), float(order.merchant.longitude)
+                        )
+                except:
+                    pass
+                
+                # Tính phí giao hàng
+                delivery_fee = 20000
+                if distance is not None:
+                    delivery_fee = max(20000, int(distance * 5000))
+                
+                data.append({
+                    "id": order.id,
+                    "status": order.status,
+                    "created_at": order.created_at.isoformat(),
+                    "merchant": {
+                        "id": order.merchant.id,
+                        "name": order.merchant.name,
+                        "address": order.merchant.address or "",
+                    },
+                    "customer": {
+                        "id": order.customer.id,
+                        "username": order.customer.username,
+                        "delivery_address": order.delivery_address or "",
+                    },
+                    "total_amount": str(order.total_amount),
+                    "distance_to_merchant_km": round(distance, 2) if distance is not None else None,
+                    "delivery_fee": delivery_fee,
+                })
+            
+            return Response(data, status=200)
+        except Exception as e:
+            print(f"❌ Lỗi trong ShipperViewSet.my_orders: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response({"detail": f"Lỗi server: {str(e)}"}, status=500)
 
     @action(detail=True, methods=['post'])
     def pickup(self, request, pk=None):
         """
         POST /api/shipper/{order_id}/pickup/
         -> shipper nhận đơn.
-        Hiện tại: đặt status thành DELIVERING và gán shipper=request.user.
-        (sau này có thể kiểm tra chỉ cho pickup nếu status = READY_FOR_PICKUP)
+        - Chỉ cho phép nhận đơn ở trạng thái READY_FOR_PICKUP hoặc PENDING
+        - Đơn phải chưa có shipper nào nhận
+        - Sau khi nhận, đặt status thành DELIVERING và gán shipper=request.user
         """
+        from django.db import transaction
+        
         try:
-            order = Order.objects.get(pk=pk)
+            # Sử dụng select_for_update để tránh race condition khi nhiều shipper cùng nhận một đơn
+            with transaction.atomic():
+                order = Order.objects.select_for_update().get(pk=pk)
+                
+                # Kiểm tra đơn có ở trạng thái hợp lệ không (READY_FOR_PICKUP hoặc PENDING)
+                if order.status not in [Order.Status.READY, Order.Status.PENDING]:
+                    return Response(
+                        {"detail": f"Không thể nhận đơn ở trạng thái {order.status}. Chỉ có thể nhận đơn ở trạng thái READY_FOR_PICKUP hoặc PENDING."},
+                        status=400
+                    )
+                
+                # Kiểm tra đơn đã có shipper chưa
+                if order.shipper is not None:
+                    if order.shipper.id == request.user.id:
+                        # Shipper này đã nhận đơn rồi
+                        return Response(
+                            {"detail": "Bạn đã nhận đơn này rồi."},
+                            status=400
+                        )
+                    else:
+                        # Đơn đã được shipper khác nhận - dùng status 409 (Conflict) để frontend dễ xử lý
+                        return Response(
+                            {
+                                "detail": "Đơn hàng này đã được shipper khác nhận.",
+                                "error_code": "ORDER_ALREADY_TAKEN",
+                                "order_id": order.id
+                            },
+                            status=409  # Conflict - đơn đã được nhận bởi shipper khác
+                        )
+                
+                # Nhận đơn: gán shipper và chuyển trạng thái
+                order.shipper = request.user
+                order.status = Order.Status.DELIVERING
+                order.save(update_fields=["shipper", "status"])
+                
         except Order.DoesNotExist:
-            return Response({"detail": "not found"}, status=404)
-
-        # set shipper cho đơn này
-        order.shipper = request.user
-        order.status = Order.Status.DELIVERING
-        order.save(update_fields=["shipper", "status"])
+            return Response({"detail": "Not found hoặc bạn không phải shipper của đơn này"}, status=404)
 
         return Response(
             {
                 "id": order.id,
                 "status": order.status,
                 "shipper_id": order.shipper.id if order.shipper else None,
+                "message": "Đã nhận đơn hàng thành công",
+            },
+            status=200,
+        )
+
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        """
+        POST /api/shipper/{order_id}/complete/
+        -> shipper hoàn tất giao hàng, đặt status thành DELIVERED.
+        """
+        try:
+            order = Order.objects.get(pk=pk, shipper=request.user)
+        except Order.DoesNotExist:
+            return Response({"detail": "Not found hoặc bạn không phải shipper của đơn này"}, status=404)
+
+        # Kiểm tra đơn phải đang ở trạng thái DELIVERING
+        if order.status != Order.Status.DELIVERING:
+            return Response(
+                {"detail": f"Chỉ có thể hoàn tất đơn hàng đang ở trạng thái DELIVERING. Đơn hiện tại: {order.status}"},
+                status=400
+            )
+
+        # Cập nhật status thành DELIVERED
+        order.status = Order.Status.DELIVERED
+        order.save(update_fields=["status"])
+
+        return Response(
+            {
+                "id": order.id,
+                "status": order.status,
+                "message": "Đã hoàn tất giao hàng thành công",
             },
             status=200,
         )
@@ -410,6 +1139,7 @@ def merchant_dashboard(request):
 
     today = now().date()
 
+    # Lấy tất cả đơn hàng hôm nay (bao gồm cả đã hủy để hiển thị)
     today_orders = (
         Order.objects.filter(
             merchant=merchant,
@@ -419,8 +1149,11 @@ def merchant_dashboard(request):
         .select_related("customer")
     )
 
-    orders_today_count = today_orders.count()
-    revenue_today = today_orders.aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00")
+    # Chỉ tính doanh thu từ đơn không bị hủy
+    today_orders_not_cancelled = today_orders.exclude(status=Order.Status.CANCELED)
+    
+    orders_today_count = today_orders_not_cancelled.count()
+    revenue_today = today_orders_not_cancelled.aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00")
 
     # món hết hàng
     sold_out_count = MenuItem.objects.filter(
@@ -428,17 +1161,30 @@ def merchant_dashboard(request):
         stock=0,
     ).count()
 
+    # Lấy đơn hàng gần đây (không chỉ hôm nay, lấy 7 đơn mới nhất)
+    recent_orders_all = (
+        Order.objects.filter(merchant=merchant)
+        .order_by("-created_at")
+        .select_related("customer")[:7]
+    )
+
     recent_orders = [
         {
             "order_id": o.id,
             "customer_username": getattr(o.customer, "username", "Khách"),
             "total": str(o.total_amount),
             "payment_status": o.payment_status,
-            "status": o.status,
+            "status": o.status,  # Trả về status thực từ database
             "time": o.created_at.strftime("%H:%M"),
         }
-        for o in today_orders[:7]
+        for o in recent_orders_all
     ]
+    
+    # Debug: Log status của các đơn hàng
+    import logging
+    logger = logging.getLogger(__name__)
+    for o in recent_orders_all[:3]:  # Log 3 đơn đầu tiên
+        logger.info(f"Order #{o.id}: status={o.status}, total={o.total_amount}, created={o.created_at}")
 
     return Response(
         {
@@ -754,6 +1500,30 @@ class InventoryViewSet(viewsets.ViewSet):
 
 class MerchantOrderViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
+
+    def retrieve(self, request, pk=None):
+        """
+        GET /api/merchant-orders/{order_id}/
+        Merchant xem chi tiết đơn hàng của merchant của họ
+        """
+        user = request.user
+        role = get_user_role(user)
+        
+        if role not in ["merchant", "admin"]:
+            return Response({"detail": "Forbidden"}, status=403)
+        
+        try:
+            order = Order.objects.get(pk=pk)
+        except Order.DoesNotExist:
+            return Response({"detail": "Order not found"}, status=404)
+        
+        # Kiểm tra quyền: merchant chỉ xem được đơn của merchant của họ
+        if role == "merchant":
+            merchants = user_merchants(user)
+            if order.merchant not in merchants:
+                return Response({"detail": "Forbidden"}, status=403)
+        
+        return Response(serialize_order(order), status=200)
 
     @action(detail=True, methods=['post'])
     def handle_out_of_stock(self, request, pk=None):

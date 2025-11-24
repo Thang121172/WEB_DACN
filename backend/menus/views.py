@@ -3,13 +3,134 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q
 from .models import MenuItem, Merchant
-from .serializers import MenuItemSerializer
+from .serializers import MenuItemSerializer, MerchantSerializer
 from .utils import haversine_distance
 
 
+class MerchantViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet cho merchants - chỉ đọc (list, retrieve)
+    """
+    queryset = Merchant.objects.filter(is_active=True)
+    serializer_class = MerchantSerializer
+
+    @action(detail=False, methods=['get'], url_path='nearby')
+    def nearby(self, request):
+        """
+        Lấy danh sách merchants gần vị trí khách hàng.
+        
+        Query params:
+        - lat: Vĩ độ của khách hàng (required)
+        - lng: Kinh độ của khách hàng (required)
+        - radius: Bán kính tìm kiếm (km), mặc định 10km
+        """
+        lat = request.query_params.get('lat')
+        lng = request.query_params.get('lng')
+        try:
+            radius = float(request.query_params.get('radius', 10))
+        except (ValueError, TypeError):
+            radius = 10.0
+
+        if not lat or not lng:
+            return Response(
+                {'error': 'Thiếu tham số lat và lng'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            customer_lat = float(lat)
+            customer_lng = float(lng)
+        except (ValueError, TypeError):
+            return Response(
+                {'error': 'lat và lng phải là số hợp lệ'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Lấy tất cả merchant có tọa độ
+        merchants_with_location = Merchant.objects.filter(
+            is_active=True,
+            latitude__isnull=False,
+            longitude__isnull=False
+        )
+
+        # Tính khoảng cách và lọc merchant trong phạm vi
+        nearby_merchants = []
+        for merchant in merchants_with_location:
+            try:
+                if merchant.latitude is None or merchant.longitude is None:
+                    continue
+                    
+                merchant_lat = float(merchant.latitude)
+                merchant_lng = float(merchant.longitude)
+                
+                distance = haversine_distance(
+                    customer_lat, customer_lng,
+                    merchant_lat, merchant_lng
+                )
+                if distance <= radius:
+                    merchant.distance_km = distance
+                    nearby_merchants.append(merchant)
+            except (ValueError, TypeError):
+                continue
+
+        # Sắp xếp theo khoảng cách (gần nhất trước)
+        nearby_merchants.sort(key=lambda m: m.distance_km)
+
+        # Serialize
+        serializer = self.get_serializer(nearby_merchants, many=True)
+        data = serializer.data
+
+        # Thêm khoảng cách vào mỗi merchant
+        for item_data, merchant in zip(data, nearby_merchants):
+            item_data['distance_km'] = round(merchant.distance_km, 2)
+
+        return Response({
+            'merchants': data,
+            'count': len(data),
+            'radius_km': radius,
+            'customer_location': {'lat': customer_lat, 'lng': customer_lng}
+        })
+
+
 class MenuViewSet(viewsets.ModelViewSet):
-    queryset = MenuItem.objects.filter(is_available=True).select_related('merchant')
+    queryset = MenuItem.objects.all().select_related('merchant')
     serializer_class = MenuItemSerializer
+    
+    def get_queryset(self):
+        """
+        Override queryset:
+        - Merchant/Admin: thấy tất cả món của merchant của họ (kể cả đã ẩn)
+        - Customer/Public: chỉ thấy món is_available=True
+        """
+        queryset = MenuItem.objects.all().select_related('merchant')
+        
+        # Nếu user là merchant hoặc admin, cho phép thấy tất cả món của merchant của họ
+        if self.request.user.is_authenticated:
+            from accounts.models import Profile
+            try:
+                profile = self.request.user.profile
+                if profile.role in ['merchant', 'admin']:
+                    # Lấy danh sách merchant mà user có quyền
+                    from orders.views import user_merchants
+                    merchants = user_merchants(self.request.user)
+                    if merchants.exists():
+                        # Merchant chỉ thấy món của merchant của họ
+                        queryset = queryset.filter(merchant__in=merchants)
+                    else:
+                        # Nếu không có merchant, trả về empty queryset
+                        queryset = queryset.none()
+                    return queryset
+            except Profile.DoesNotExist:
+                pass
+        
+        # Customer/Public: chỉ thấy món is_available=True
+        return queryset.filter(is_available=True)
+    
+    def get_serializer_context(self):
+        """Thêm request vào context để serializer có thể build absolute URL"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
     @action(detail=False, methods=['get'], url_path='nearby')
     def nearby(self, request):

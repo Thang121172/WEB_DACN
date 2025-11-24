@@ -1,6 +1,7 @@
 from __future__ import annotations
 from django.contrib.auth import authenticate, get_user_model
 from django.db import transaction
+from django.db.models import Q
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -247,7 +248,7 @@ class LoginSerializer(serializers.Serializer):
         # Lấy username hoặc email (ưu tiên username nếu có)
         username = attrs.get("username") or ""
         email = attrs.get("email") or ""
-        username_or_email = (username.strip().lower() if username else "") or (email.strip().lower() if email else "")
+        username_or_email = (username.strip() if username else "") or (email.strip().lower() if email else "")
         password = attrs.get("password", "")
 
         if not username_or_email:
@@ -256,10 +257,33 @@ class LoginSerializer(serializers.Serializer):
         if not password:
             raise serializers.ValidationError({"detail": "Vui lòng nhập mật khẩu."})
 
-        # do chúng ta tạo user với username=email, nên có thể dùng username_or_email để authenticate
+        # Thử authenticate với username trước
         user = authenticate(username=username_or_email, password=password)
+        
+        # Nếu không tìm thấy, thử tìm user theo email rồi authenticate với username thật
         if not user:
-            raise serializers.ValidationError({"detail": "Sai email/username hoặc mật khẩu."})
+            try:
+                # Tìm user theo email (case-insensitive)
+                user_by_email = User.objects.filter(email__iexact=username_or_email).first()
+                if user_by_email:
+                    # Authenticate với username thật của user
+                    user = authenticate(username=user_by_email.username, password=password)
+            except Exception:
+                pass
+        
+        if not user:
+            # Kiểm tra xem email/username có tồn tại không (không cần password)
+            user_exists = User.objects.filter(
+                Q(username__iexact=username_or_email) | 
+                Q(email__iexact=username_or_email)
+            ).exists()
+            
+            if not user_exists:
+                raise serializers.ValidationError({
+                    "detail": "Email/username không tồn tại trong hệ thống. Vui lòng kiểm tra lại hoặc đăng ký tài khoản mới."
+                })
+            else:
+                raise serializers.ValidationError({"detail": "Sai email/username hoặc mật khẩu."})
         
         if not user.is_active:
             raise serializers.ValidationError({"detail": "Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email để kích hoạt tài khoản."})
@@ -291,6 +315,12 @@ class LoginSerializer(serializers.Serializer):
 # =========================================================
 class MeSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
+    default_address = serializers.SerializerMethodField()
+    phone = serializers.SerializerMethodField()
+    full_name = serializers.SerializerMethodField()
+    latitude = serializers.SerializerMethodField()
+    longitude = serializers.SerializerMethodField()
+    location_updated_at = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -302,6 +332,12 @@ class MeSerializer(serializers.ModelSerializer):
             "is_active",
             "is_staff",
             "is_superuser",
+            "default_address",
+            "phone",
+            "full_name",
+            "latitude",
+            "longitude",
+            "location_updated_at",
         ]
 
     def get_role(self, obj):
@@ -309,6 +345,91 @@ class MeSerializer(serializers.ModelSerializer):
             return obj.profile.role
         except Profile.DoesNotExist:
             return None
+
+    def get_default_address(self, obj):
+        try:
+            return obj.profile.default_address
+        except Profile.DoesNotExist:
+            return None
+
+    def get_phone(self, obj):
+        try:
+            return obj.profile.phone
+        except Profile.DoesNotExist:
+            return None
+
+    def get_full_name(self, obj):
+        try:
+            return obj.profile.full_name
+        except Profile.DoesNotExist:
+            return None
+
+    def get_latitude(self, obj):
+        try:
+            return float(obj.profile.latitude) if obj.profile.latitude else None
+        except Profile.DoesNotExist:
+            return None
+
+    def get_longitude(self, obj):
+        try:
+            return float(obj.profile.longitude) if obj.profile.longitude else None
+        except Profile.DoesNotExist:
+            return None
+
+    def get_location_updated_at(self, obj):
+        try:
+            return obj.profile.location_updated_at.isoformat() if obj.profile.location_updated_at else None
+        except Profile.DoesNotExist:
+            return None
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    """Serializer để GET/PUT profile information"""
+    email = serializers.EmailField(source='user.email', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    
+    class Meta:
+        model = Profile
+        fields = [
+            'id',
+            'username',
+            'email',
+            'role',
+            'default_address',
+            'phone',
+            'full_name',
+            'store_name',
+            'store_address',
+            'vehicle_plate',
+            'is_available',
+        ]
+        read_only_fields = ['id', 'role', 'store_name', 'store_address', 'vehicle_plate', 'is_available']
+
+    def update(self, instance, validated_data):
+        # Chỉ cho phép update default_address, phone, full_name cho customer
+        if instance.role == 'customer':
+            if 'default_address' in validated_data:
+                instance.default_address = validated_data['default_address']
+            if 'phone' in validated_data:
+                instance.phone = validated_data['phone']
+            if 'full_name' in validated_data:
+                instance.full_name = validated_data['full_name']
+            instance.save()
+        return instance
+
+
+class ProfileUpdateSerializer(serializers.Serializer):
+    """Serializer để cập nhật thông tin profile"""
+    default_address = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    full_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+
+    def update(self, instance, validated_data):
+        profile, created = Profile.objects.get_or_create(user=instance)
+        for attr, value in validated_data.items():
+            setattr(profile, attr, value or None)
+        profile.save()
+        return instance
 
 
 # =========================================================

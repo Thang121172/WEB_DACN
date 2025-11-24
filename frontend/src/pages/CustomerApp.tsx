@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import api from '../services/http';
 import { useAuthContext } from '../context/AuthContext';
 import LocationPermission from '../components/LocationPermission';
-import { useLocation } from '../hooks/useLocation'; 
+import { useLocation } from '../hooks/useLocation';
+import { useToast } from '../components/Toast'; 
 
 // ===================================
 // INTERFACES (Mock)
@@ -16,6 +17,7 @@ interface Product {
     price: number;
     image_url: string;
     merchant_name: string;
+    merchant_id?: number; // ID của merchant
     distance_km?: number; // Khoảng cách từ vị trí khách hàng (km)
 }
 
@@ -43,14 +45,49 @@ const formatCurrency = (amount: number) => {
 // PRODUCT CARD COMPONENT
 // ===================================
 const ProductCard: React.FC<{ product: Product; isAuthenticated: boolean }> = ({ product, isAuthenticated }) => {
+    const { showToast } = useToast()
+    
     const handleAddToCart = () => {
         if (!isAuthenticated) {
-            alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!');
-            window.location.href = '/login';
+            showToast('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!', 'warning');
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 1500);
             return;
         }
-        // TODO: Thêm chức năng thêm vào giỏ hàng
-        console.log(`Added ${product.name} to cart`);
+
+        // Get existing cart from localStorage
+        const existingCart = localStorage.getItem('cart');
+        const cart = existingCart ? JSON.parse(existingCart) : [];
+
+        // Check if item already exists in cart
+        const existingItemIndex = cart.findIndex((cartItem: any) => cartItem.id === product.id);
+        
+        if (existingItemIndex >= 0) {
+            // Increase quantity
+            cart[existingItemIndex].quantity += 1;
+        } else {
+            // Add new item
+            cart.push({
+                id: product.id,
+                product_name: product.name,
+                store_name: product.merchant_name || 'Unknown',
+                merchant_id: product.merchant_id, // Lưu merchant_id
+                price: product.price,
+                quantity: 1,
+                image_url: product.image_url || 'https://via.placeholder.com/200?text=Food',
+            });
+        }
+
+        // Save to localStorage
+        localStorage.setItem('cart', JSON.stringify(cart));
+        console.log('✅ Đã lưu vào localStorage:', cart);
+        
+        // Trigger custom event để các component khác có thể listen
+        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: cart }));
+        
+        showToast(`Đã thêm "${product.name}" vào giỏ hàng!`, 'success');
+        console.log(`✅ Added ${product.name} to cart`);
     };
 
     return (
@@ -118,44 +155,50 @@ export default function CustomerApp() {
                 // Nếu có vị trí, lấy menu items gần đó (trong phạm vi 10km)
                 if (location) {
                     try {
-                        console.log(`Đang tìm menu items gần vị trí: ${location.latitude}, ${location.longitude}`);
+                        console.log(`📍 Đang tìm menu items gần vị trí: ${location.latitude}, ${location.longitude}`);
+                        console.log(`📏 Bán kính tìm kiếm: 20km`);
+                        
                         const nearbyResponse = await api.get('/menus/nearby/', {
                             params: {
                                 lat: location.latitude,
                                 lng: location.longitude,
-                                radius: 10 // 10km
+                                radius: 20 // 20km để chỉ hiển thị các cửa hàng gần
                             }
                         });
                         
-                        console.log('API nearby response:', nearbyResponse.data);
+                        console.log('📦 API nearby response:', nearbyResponse.data);
                         
                         if (nearbyResponse.data && nearbyResponse.data.items) {
                             menuItems = nearbyResponse.data.items;
-                            console.log(`✓ Tìm thấy ${menuItems.length} món ăn gần bạn trong phạm vi 10km`);
+                            console.log(`✅ Tìm thấy ${menuItems.length} món ăn gần bạn trong phạm vi 20km`);
                             
-                            // Nếu không có kết quả, fallback về lấy tất cả
+                            // Log các merchant và khoảng cách
+                            const merchants = new Set<string>();
+                            menuItems.forEach((item: any) => {
+                                if (item.merchant_name && item.distance_km !== undefined) {
+                                    merchants.add(`${item.merchant_name} (${item.distance_km.toFixed(2)}km)`);
+                                }
+                            });
+                            console.log(`🏪 Các cửa hàng:`, Array.from(merchants));
+                            
+                            // KHÔNG fallback - chỉ hiển thị các món trong phạm vi
                             if (menuItems.length === 0) {
-                                console.warn('Không có món ăn nào trong phạm vi 10km, lấy tất cả menu items');
-                                const response = await api.get('/menus/');
-                                menuItems = response.data || [];
+                                console.warn('⚠️ Không có món ăn nào trong phạm vi 20km');
                             }
                         } else {
-                            console.warn('API nearby không trả về items, lấy tất cả menu items');
-                            const response = await api.get('/menus/');
-                            menuItems = response.data || [];
+                            console.warn('⚠️ API nearby không trả về items');
+                            menuItems = [];
                         }
                     } catch (nearbyError: any) {
-                        console.error("Lỗi khi gọi API nearby:", nearbyError);
-                        console.warn("Không thể lấy menu items gần vị trí, lấy tất cả menu items:", nearbyError?.response?.data || nearbyError.message);
-                        // Fallback: lấy tất cả menu items nếu API nearby lỗi
-                        const response = await api.get('/menus/');
-                        menuItems = response.data || [];
+                        console.error("❌ Lỗi khi gọi API nearby:", nearbyError);
+                        console.error("Chi tiết lỗi:", nearbyError?.response?.data || nearbyError.message);
+                        // KHÔNG fallback - chỉ hiển thị khi có vị trí và API thành công
+                        menuItems = [];
                     }
                 } else {
-                    // Nếu chưa có vị trí, lấy tất cả menu items
-                    console.log('Chưa có vị trí, lấy tất cả menu items');
-                    const response = await api.get('/menus/');
-                    menuItems = response.data || [];
+                    // Nếu chưa có vị trí, KHÔNG lấy menu items (yêu cầu vị trí)
+                    console.log('⚠️ Chưa có vị trí, không hiển thị menu items');
+                    menuItems = [];
                 }
                 
                 // Transform data từ API sang format Product
@@ -168,8 +211,15 @@ export default function CustomerApp() {
                         price: parseFloat(item.price),
                         image_url: item.image_url || 'https://via.placeholder.com/200?text=No+Image',
                         merchant_name: item.merchant_name || 'Unknown',
+                        merchant_id: (item as any).merchant_id, // ID của merchant
                         distance_km: (item as any).distance_km, // Khoảng cách nếu có
-                    }));
+                    }))
+                    .sort((a, b) => {
+                        // Sắp xếp theo khoảng cách (gần nhất trước)
+                        const distA = a.distance_km || Infinity;
+                        const distB = b.distance_km || Infinity;
+                        return distA - distB;
+                    });
                 
                 setProducts(products);
                 setLoading(false);
@@ -189,15 +239,13 @@ export default function CustomerApp() {
             return;
         }
 
-        if (!location && permissionStatus === 'prompt') {
-            // Hiển thị sau 1 giây để không làm gián đoạn trải nghiệm
+        // Luôn hiển thị LocationPermission nếu đã đăng nhập
+        // Để user có thể xem/sửa vị trí hoặc cấp quyền nếu chưa có
+        if (isAuthenticated) {
             const timer = setTimeout(() => {
                 setShowLocationPrompt(true);
-            }, 1000);
+            }, 500);
             return () => clearTimeout(timer);
-        } else if (location) {
-            // Khi đã có vị trí, vẫn hiển thị component để show địa chỉ
-            setShowLocationPrompt(true);
         }
     }, [location, permissionStatus, isAuthenticated]);
 
@@ -234,6 +282,19 @@ export default function CustomerApp() {
             {/* Location Permission Prompt - Hiển thị form yêu cầu hoặc thông tin vị trí */}
             {showLocationPrompt && (
                 <div className="mb-6">
+                    {location && (
+                        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-800">
+                                <strong>📍 Vị trí hiện tại:</strong> {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                                {location.accuracy && (
+                                    <span className="ml-2">(Độ chính xác: {location.accuracy.toFixed(0)}m)</span>
+                                )}
+                            </p>
+                            <p className="text-xs text-blue-600 mt-1">
+                                Đang tìm cửa hàng trong phạm vi 20km từ vị trí này
+                            </p>
+                        </div>
+                    )}
                     <LocationPermission
                         onLocationGranted={(loc) => {
                             console.log('Location granted:', loc);
@@ -275,7 +336,17 @@ export default function CustomerApp() {
                         </div>
                     ) : (
                          <div className="p-10 text-center bg-white rounded-xl shadow-lg text-gray-500">
-                            Không tìm thấy món ăn nào phù hợp với từ khóa "{searchTerm}".
+                            {searchTerm ? (
+                                <>Không tìm thấy món ăn nào phù hợp với từ khóa "{searchTerm}".</>
+                            ) : location ? (
+                                <>
+                                    <p className="text-lg font-semibold mb-2">Không có cửa hàng nào trong phạm vi 20km</p>
+                                    <p className="text-sm">Vị trí hiện tại: {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p>
+                                    <p className="text-sm mt-2">Vui lòng thử làm mới vị trí GPS hoặc mở rộng phạm vi tìm kiếm.</p>
+                                </>
+                            ) : (
+                                <>Vui lòng cấp quyền vị trí để xem các cửa hàng gần bạn.</>
+                            )}
                         </div>
                     )}
                 </>

@@ -12,6 +12,26 @@ interface RevenueStats {
   deliveries_this_month: number;
 }
 
+interface DeliveryHistoryItem {
+  id: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  merchant: {
+    id: number;
+    name: string;
+    address: string;
+  };
+  customer: {
+    id: number;
+    username: string;
+    delivery_address: string;
+  };
+  total_amount: string;
+  distance_to_merchant_km: number | null;
+  delivery_fee: number;
+}
+
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
@@ -40,6 +60,7 @@ export default function ShipperRevenue() {
   const { user, isAuthenticated, loading: authLoading } = useAuthContext();
   const navigate = useNavigate();
   const [stats, setStats] = useState<RevenueStats | null>(null);
+  const [deliveryHistory, setDeliveryHistory] = useState<DeliveryHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,19 +76,21 @@ export default function ShipperRevenue() {
     const fetchRevenueStats = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with actual shipper revenue API endpoint
-        // const response = await api.get('/shipper/revenue/');
-        // setStats(response.data);
+        const [revenueResponse, historyResponse] = await Promise.all([
+          api.get('/shipper/revenue/'),
+          api.get('/shipper/delivery_history/').catch(() => ({ data: [] }))
+        ]);
         
-        // Mock data for now
         setStats({
-          total_earnings: 0,
-          total_deliveries: 0,
-          earnings_today: 0,
-          deliveries_today: 0,
-          earnings_this_month: 0,
-          deliveries_this_month: 0,
+          total_earnings: revenueResponse.data.total_earnings || 0,
+          total_deliveries: revenueResponse.data.total_deliveries || 0,
+          earnings_today: revenueResponse.data.earnings_today || 0,
+          deliveries_today: revenueResponse.data.deliveries_today || 0,
+          earnings_this_month: revenueResponse.data.earnings_this_month || 0,
+          deliveries_this_month: revenueResponse.data.deliveries_this_month || 0,
         });
+        
+        setDeliveryHistory(historyResponse.data || []);
       } catch (error) {
         console.error('Failed to fetch revenue stats:', error);
         setStats({
@@ -78,6 +101,7 @@ export default function ShipperRevenue() {
           earnings_this_month: 0,
           deliveries_this_month: 0,
         });
+        setDeliveryHistory([]);
       } finally {
         setLoading(false);
       }
@@ -156,12 +180,71 @@ export default function ShipperRevenue() {
         />
       </div>
 
-      {/* Additional revenue details can be added here */}
+      {/* Delivery History */}
       <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Lịch sử giao hàng</h2>
-        <p className="text-gray-600">
-          Chi tiết lịch sử giao hàng và thu nhập sẽ được hiển thị ở đây.
-        </p>
+        {deliveryHistory.length === 0 ? (
+          <p className="text-gray-600">
+            Chưa có đơn hàng nào đã giao.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Mã đơn</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Cửa hàng</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Khách hàng</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Khoảng cách</th>
+                  <th className="text-right py-3 px-4 font-semibold text-gray-700">Phí giao hàng</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Ngày giao</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deliveryHistory.map((order) => {
+                  const deliveryDate = new Date(order.updated_at);
+                  return (
+                    <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <Link
+                          to={`/orders/${order.id}`}
+                          className="text-grabGreen-700 hover:text-grabGreen-800 font-medium"
+                        >
+                          #{order.id}
+                        </Link>
+                      </td>
+                      <td className="py-3 px-4 text-gray-700">
+                        <div className="font-medium">{order.merchant.name}</div>
+                        <div className="text-sm text-gray-500">{order.merchant.address}</div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-700">
+                        <div className="font-medium">{order.customer.username}</div>
+                        <div className="text-sm text-gray-500">{order.customer.delivery_address}</div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-700">
+                        {order.distance_to_merchant_km !== null
+                          ? `${order.distance_to_merchant_km.toFixed(2)} km`
+                          : 'N/A'}
+                      </td>
+                      <td className="py-3 px-4 text-right font-semibold text-grabGreen-700">
+                        {formatCurrency(order.delivery_fee)}
+                      </td>
+                      <td className="py-3 px-4 text-gray-700">
+                        {deliveryDate.toLocaleDateString('vi-VN', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

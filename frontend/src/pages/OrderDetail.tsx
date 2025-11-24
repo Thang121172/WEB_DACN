@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/http';
 import { useAuthContext } from '../context/AuthContext';
+import { useToast } from '../components/Toast';
 
 interface OrderItem {
   id: number;
@@ -11,6 +12,15 @@ interface OrderItem {
   notes?: string;
 }
 
+interface ShipperInfo {
+  id: number;
+  username: string;
+  email: string;
+  phone: string;
+  full_name: string;
+  vehicle_plate?: string;
+}
+
 interface OrderDetails {
   order_id: number;
   customer_name: string;
@@ -18,6 +28,7 @@ interface OrderDetails {
   customer_phone: string;
   merchant_name?: string;
   merchant_address?: string;
+  shipper?: ShipperInfo | null;
   order_time: string;
   delivery_time_estimate?: string;
   payment_method: string;
@@ -50,6 +61,7 @@ export default function OrderDetail() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthContext();
+  const { showToast } = useToast();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -65,10 +77,36 @@ export default function OrderDetail() {
       setLoading(true);
       try {
         const response = await api.get(`/orders/${orderId}/`);
-        setOrderDetails(response.data);
+        const data = response.data;
+        console.log('📦 Order data from API:', data);
+        console.log('🚚 Shipper data:', data.shipper);
+        // Map backend response to frontend format
+        setOrderDetails({
+          order_id: data.order_id || data.id,
+          customer_name: data.customer_name || '',
+          customer_address: data.customer_address || data.delivery_address || '',
+          customer_phone: data.customer_phone || '',
+          merchant_name: data.merchant_name || data.merchant?.name,
+          merchant_address: data.merchant_address || '',
+          shipper: data.shipper || null,
+          order_time: data.order_time || data.created_at,
+          delivery_time_estimate: data.delivery_time_estimate,
+          payment_method: data.payment_method || 'cash',
+          items: (data.items || []).map((item: any) => ({
+            id: item.id,
+            product_name: item.product_name || item.name,
+            quantity: item.quantity || 1,
+            price: parseFloat(item.price || 0),
+            notes: item.notes,
+          })),
+          subtotal: parseFloat(data.subtotal || 0),
+          delivery_fee: parseFloat(data.delivery_fee || 35000),
+          total: parseFloat(data.total || data.total_amount || 0),
+          status: data.status,
+        });
       } catch (error) {
         console.error('Failed to fetch order details:', error);
-        alert('Không thể tải chi tiết đơn hàng. Vui lòng thử lại.');
+        showToast('Không thể tải chi tiết đơn hàng. Vui lòng thử lại.', 'error');
         navigate('/');
       } finally {
         setLoading(false);
@@ -88,14 +126,14 @@ export default function OrderDetail() {
       await api.post(`/orders/${orderId}/cancel/`, {
         reason: 'Khách hàng hủy đơn'
       });
-      alert('Đơn hàng đã được hủy thành công');
+      showToast('Đơn hàng đã được hủy thành công', 'success');
       setShowCancelConfirm(false);
       // Reload order details
       const response = await api.get(`/orders/${orderId}/`);
       setOrderDetails(response.data);
     } catch (error: any) {
       console.error('Failed to cancel order:', error);
-      alert(error.response?.data?.detail || 'Không thể hủy đơn hàng. Vui lòng thử lại.');
+      showToast(error.response?.data?.detail || 'Không thể hủy đơn hàng. Vui lòng thử lại.', 'error');
     } finally {
       setCanceling(false);
     }
@@ -182,6 +220,30 @@ export default function OrderDetail() {
               </div>
             </div>
           )}
+
+          {/* Shipper Info */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Thông tin shipper</h2>
+            {orderDetails.shipper ? (
+              <div className="space-y-2 text-gray-700">
+                <p><span className="font-semibold">Tên shipper:</span> {orderDetails.shipper.full_name || orderDetails.shipper.username}</p>
+                {orderDetails.shipper.phone && (
+                  <p><span className="font-semibold">SĐT:</span> {orderDetails.shipper.phone}</p>
+                )}
+                {orderDetails.shipper.vehicle_plate && (
+                  <p><span className="font-semibold">Biển số xe:</span> {orderDetails.shipper.vehicle_plate}</p>
+                )}
+                {orderDetails.shipper.email && (
+                  <p><span className="font-semibold">Email:</span> {orderDetails.shipper.email}</p>
+                )}
+              </div>
+            ) : (
+              <div className="text-gray-500 italic">
+                <p>Chưa có shipper nhận đơn hàng này.</p>
+                <p className="text-sm mt-1">Shipper sẽ được gán khi đơn hàng sẵn sàng giao.</p>
+              </div>
+            )}
+          </div>
 
           {/* Delivery Address */}
           <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">

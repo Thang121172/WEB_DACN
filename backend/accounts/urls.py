@@ -7,6 +7,7 @@ from .views import (
     RegisterConfirmOTPView,
     LoginView,
     MeView,
+    ProfileUpdateView,
     RegisterMerchantView,
     MyMerchantsView,
     ForgotPasswordRequestOTPView,
@@ -29,6 +30,7 @@ urlpatterns = [
 
     # 4. User/Me & Merchant
     path('me/', MeView.as_view(), name='me'),
+    path('profile/', ProfileUpdateView.as_view(), name='profile_update'),
     path('register-merchant/', RegisterMerchantView.as_view(), name='register_merchant'),
     path('my-merchants/', MyMerchantsView.as_view(), name='my_merchants'),
     

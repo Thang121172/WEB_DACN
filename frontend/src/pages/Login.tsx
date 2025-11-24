@@ -25,19 +25,31 @@ export default function Login() {
     setError('');
     setSubmitting(true);
 
-    try {
-      // chuẩn hoá input: nếu user gõ email thì toLowerCase(),
-      // nếu user gõ username thuần thì cũng không sao
-      const usernameClean = identifier.trim().toLowerCase();
-
-      // 1. Gọi login để lấy JWT access/refresh
-      // Backend (TokenObtainPairView) ở /api/accounts/login/
-      // Body chuẩn: { username, password }
-      // Response chuẩn: { access, refresh }
-      const tokenResp = await api.post('/accounts/login/', {
-        username: usernameClean,
-        password,
-      });
+    try {
+      // chuẩn hoá input: nếu user gõ email thì toLowerCase(),
+      // nếu user gõ username thuần thì cũng không sao
+      const identifierClean = identifier.trim();
+      const isEmail = identifierClean.includes('@');
+      
+      // 1. Gọi login để lấy JWT access/refresh
+      // Backend LoginView ở /api/accounts/login/
+      // Body: { username, password } hoặc { email, password }
+      // Response: { tokens: { access, refresh }, role, ... }
+      const loginPayload: any = {
+        password,
+      };
+      
+      // Nếu trông giống email, gửi cả email và username (backend sẽ xử lý)
+      if (isEmail) {
+        loginPayload.email = identifierClean.toLowerCase();
+        loginPayload.username = identifierClean.toLowerCase();
+      } else {
+        loginPayload.username = identifierClean.toLowerCase();
+      }
+      
+      console.log('[Login] Sending login request:', { ...loginPayload, password: '***' });
+      const tokenResp = await api.post('/accounts/login/', loginPayload);
+      console.log('[Login] Login response:', tokenResp.data);
 
       const accessToken = tokenResp.data?.tokens?.access; // <--- Cần kiểm tra lại cấu trúc: tokens.access
       const refreshToken = tokenResp.data?.tokens?.refresh; // <--- Cần kiểm tra lại cấu trúc: tokens.refresh
@@ -92,12 +104,14 @@ export default function Login() {
         navigate('/', { replace: true }); 
       }
       
-    } catch (err: any) {
-      console.error('Login failed:', err);
+    } catch (err: any) {
+      console.error('Login failed:', err);
+      console.error('Login error response:', err?.response?.data);
+      console.error('Login error status:', err?.response?.status);
 
-      // SimpleJWT khi login fail thường trả:
-      // { "detail": "No active account found with the given credentials" }
-      const fallbackMsg =
+      // SimpleJWT khi login fail thường trả:
+      // { "detail": "No active account found with the given credentials" }
+      const fallbackMsg =
         err?.response?.data?.detail ||
         err?.response?.data?.message ||
         'Sai email / mật khẩu hoặc tài khoản chưa kích hoạt.';

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/http';
 import { useAuthContext } from '../context/AuthContext';
+import { useToast } from '../components/Toast';
 
 interface MenuItem {
   id: number;
@@ -33,6 +34,7 @@ export default function RestaurantDetail() {
   const { restaurantId } = useParams<{ restaurantId: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthContext();
+  const { showToast } = useToast();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,8 +55,8 @@ export default function RestaurantDetail() {
         setMenuItems(menuResponse.data || []);
       } catch (error) {
         console.error('Failed to fetch restaurant data:', error);
-        alert('Không thể tải thông tin cửa hàng. Vui lòng thử lại.');
-        navigate('/');
+        showToast('Không thể tải thông tin cửa hàng. Vui lòng thử lại.', 'error');
+        setTimeout(() => navigate('/'), 2000);
       } finally {
         setLoading(false);
       }
@@ -67,8 +69,8 @@ export default function RestaurantDetail() {
 
   const handleAddToCart = (item: MenuItem) => {
     if (!isAuthenticated) {
-      alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!');
-      navigate('/login');
+      showToast('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!', 'warning');
+      setTimeout(() => navigate('/login'), 1500);
       return;
     }
 
@@ -96,7 +98,7 @@ export default function RestaurantDetail() {
 
     // Save to localStorage
     localStorage.setItem('cart', JSON.stringify(cart));
-    alert(`Đã thêm "${item.name}" vào giỏ hàng!`);
+    showToast(`Đã thêm "${item.name}" vào giỏ hàng!`, 'success');
   };
 
   const filteredMenuItems = menuItems.filter((item) =>

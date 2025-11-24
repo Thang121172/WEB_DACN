@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../context/AuthContext';
 import api from '../../services/http';
+import { useToast } from '../../components/Toast';
 
 interface MenuItem {
   id: number;
@@ -14,6 +15,7 @@ interface MenuItem {
 export default function InventoryManagement() {
   const { user, isAuthenticated, loading: authLoading } = useAuthContext();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -35,6 +37,24 @@ export default function InventoryManagement() {
     }
 
     fetchMenuItems();
+    
+    // Lắng nghe sự kiện refresh inventory khi có thay đổi order
+    const handleInventoryRefresh = () => {
+      fetchMenuItems();
+    };
+    
+    // Lắng nghe custom event để refresh inventory
+    window.addEventListener('inventoryRefresh', handleInventoryRefresh);
+    
+    // Refresh mỗi 5 giây để đảm bảo dữ liệu luôn mới nhất
+    const interval = setInterval(() => {
+      fetchMenuItems();
+    }, 5000);
+    
+    return () => {
+      window.removeEventListener('inventoryRefresh', handleInventoryRefresh);
+      clearInterval(interval);
+    };
   }, [isAuthenticated, authLoading, user, navigate]);
 
   const fetchMenuItems = async () => {
@@ -53,7 +73,7 @@ export default function InventoryManagement() {
   const handleAdjustStock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem || !adjustData.quantity) {
-      alert('Vui lòng nhập số lượng');
+      showToast('Vui lòng nhập số lượng', 'warning');
       return;
     }
 
@@ -64,14 +84,14 @@ export default function InventoryManagement() {
         reason: adjustData.reason
       });
 
-      alert('Đã cập nhật tồn kho thành công');
+      showToast('Đã cập nhật tồn kho thành công', 'success');
       setShowAdjustForm(false);
       setEditingItem(null);
       setAdjustData({ type: 'ADJUST', quantity: '', reason: '' });
       fetchMenuItems();
     } catch (error: any) {
       console.error('Failed to adjust stock:', error);
-      alert(error.response?.data?.detail || 'Không thể cập nhật tồn kho');
+      showToast(error.response?.data?.detail || 'Không thể cập nhật tồn kho', 'error');
     }
   };
 

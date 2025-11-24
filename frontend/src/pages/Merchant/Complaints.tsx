@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/http';
 import { useAuthContext } from '../../context/AuthContext';
+import { useToast } from '../../components/Toast';
 
 interface Complaint {
   id: number;
@@ -62,7 +63,7 @@ export default function Complaints() {
       setComplaints(response.data);
     } catch (error) {
       console.error('Failed to fetch complaints:', error);
-      alert('Không thể tải danh sách khiếu nại');
+      showToast('Không thể tải danh sách khiếu nại', 'error');
     } finally {
       setLoading(false);
     }
@@ -70,7 +71,7 @@ export default function Complaints() {
 
   const handleRespond = async (complaintId: number, status: 'RESOLVED' | 'REJECTED') => {
     if (!response.trim()) {
-      alert('Vui lòng nhập phản hồi');
+      showToast('Vui lòng nhập phản hồi', 'warning');
       return;
     }
 
@@ -80,13 +81,13 @@ export default function Complaints() {
         response: response,
         status: status
       });
-      alert('Đã phản hồi khiếu nại thành công');
+      showToast('Đã phản hồi khiếu nại thành công', 'success');
       setSelectedComplaint(null);
       setResponse('');
       fetchComplaints();
     } catch (error: any) {
       console.error('Failed to respond complaint:', error);
-      alert(error.response?.data?.detail || 'Không thể phản hồi khiếu nại');
+      showToast(error.response?.data?.detail || 'Không thể phản hồi khiếu nại', 'error');
     } finally {
       setSubmitting(false);
     }

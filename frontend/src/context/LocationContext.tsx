@@ -6,11 +6,13 @@ interface LocationContextType {
   loading: boolean
   error: string | null
   permissionStatus: 'prompt' | 'granted' | 'denied' | 'unknown'
-  requestPermission: () => Promise<void>
-  getCurrentLocation: () => Promise<void>
+  requestPermission: (forceRefresh?: boolean) => Promise<void>
+  getCurrentLocation: (forceRefresh?: boolean) => Promise<void>
   clearLocation: () => void
   address: string | null
   setAddress: (address: string | null) => void
+  isFetchingAddress: boolean
+  addressFetchFailed: boolean
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined)
@@ -18,6 +20,8 @@ const LocationContext = createContext<LocationContextType | undefined>(undefined
 export function LocationProvider({ children }: { children: ReactNode }) {
   const locationHook = useLocation()
   const [address, setAddress] = useState<string | null>(null)
+  const [isFetchingAddress, setIsFetchingAddress] = useState(false)
+  const [addressFetchFailed, setAddressFetchFailed] = useState(false)
 
   // Lấy địa chỉ từ localStorage khi mount
   useEffect(() => {
@@ -36,11 +40,21 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     }
   }, [address])
 
-  // Thử lấy địa chỉ từ tọa độ (reverse geocoding) khi có vị trí
+  // Reset trạng thái khi vị trí thay đổi
   useEffect(() => {
-    if (locationHook.location && !address) {
+    if (locationHook.location) {
+      setAddressFetchFailed(false)
+    }
+  }, [locationHook.location?.latitude, locationHook.location?.longitude])
+
+  // Thử lấy địa chỉ từ tọa độ (reverse geocoding) khi có vị trí
+  // Chỉ fetch nếu chưa có address (để tránh override address đã được set thủ công)
+  useEffect(() => {
+    if (locationHook.location && !address && !addressFetchFailed) {
       // Sử dụng OpenStreetMap Nominatim API để reverse geocoding
       const fetchAddress = async () => {
+        setIsFetchingAddress(true)
+        setAddressFetchFailed(false)
         try {
           const { latitude, longitude } = locationHook.location!
           const response = await fetch(
@@ -113,25 +127,31 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             } else if (parts.length > 0) {
               setAddress(parts.join(', '))
             } else {
-              // Nếu không lấy được địa chỉ, để người dùng nhập thủ công
-              setAddress(null)
+              // Nếu không lấy được địa chỉ, đánh dấu là đã thử nhưng thất bại
+              setAddressFetchFailed(true)
             }
+          } else {
+            setAddressFetchFailed(true)
           }
         } catch (error) {
           console.error('Failed to fetch address from coordinates:', error)
-          // Nếu lỗi, để người dùng nhập thủ công
-          setAddress(null)
+          // Nếu lỗi, đánh dấu là đã thử nhưng thất bại
+          setAddressFetchFailed(true)
+        } finally {
+          setIsFetchingAddress(false)
         }
       }
 
       fetchAddress()
     }
-  }, [locationHook.location, address])
+  }, [locationHook.location, address, addressFetchFailed])
 
   const value: LocationContextType = {
     ...locationHook,
     address,
-    setAddress
+    setAddress,
+    isFetchingAddress,
+    addressFetchFailed
   }
 
   return (

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/http';
 import { useAuthContext } from '../context/AuthContext';
+import { useToast } from '../components/Toast';
 
 interface OrderItem {
   id: number;
@@ -22,6 +23,7 @@ export default function ReviewOrder() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthContext();
+  const { showToast } = useToast();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -53,7 +55,7 @@ export default function ReviewOrder() {
         setMenuItemRatings(initialRatings);
       } catch (error) {
         console.error('Failed to fetch order:', error);
-        alert('Không thể tải thông tin đơn hàng');
+        showToast('Không thể tải thông tin đơn hàng', 'error');
         navigate('/');
       } finally {
         setLoading(false);
@@ -86,11 +88,11 @@ export default function ReviewOrder() {
         menu_item_reviews: menuItemReviews
       });
 
-      alert('Cảm ơn bạn đã đánh giá!');
+      showToast('Cảm ơn bạn đã đánh giá!', 'success');
       navigate(`/orders/${orderId}`);
     } catch (error: any) {
       console.error('Failed to submit review:', error);
-      alert(error.response?.data?.detail || 'Không thể gửi đánh giá. Vui lòng thử lại.');
+      showToast(error.response?.data?.detail || 'Không thể gửi đánh giá. Vui lòng thử lại.', 'error');
     } finally {
       setSubmitting(false);
     }

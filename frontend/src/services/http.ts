@@ -27,6 +27,10 @@ api.interceptors.request.use(
     if (token) {
       config.headers = config.headers ?? {};
       (config.headers as any).Authorization = `Bearer ${token}`;
+      console.log(`[API] Request to ${config.url} with token: ${token.substring(0, 20)}...`);
+    } else {
+      console.warn(`[API] Request to ${config.url} without token`);
+      console.warn(`[API] localStorage.getItem('authToken'):`, localStorage.getItem('authToken'));
     }
     return config;
   },
@@ -44,8 +48,20 @@ api.interceptors.response.use(
   (err: AxiosError) => {
     if (err.response?.status === 401) {
       // phiên đăng nhập hết hạn / token sai
+      const token = localStorage.getItem("authToken");
       localStorage.removeItem("authToken");
-      console.warn("[API] Unauthorized. Clearing authToken.");
+      console.warn("[API] Unauthorized (401). Clearing authToken.");
+      console.warn("[API] Request URL:", err.config?.url);
+      console.warn("[API] Had token:", token ? token.substring(0, 20) + '...' : 'none');
+      
+      // Redirect to login nếu đang ở trang cần authentication
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        // Chỉ redirect nếu không phải đang ở trang login/register
+        // (tránh redirect loop)
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 100);
+      }
     }
     return Promise.reject(err);
   }

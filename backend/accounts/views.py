@@ -30,6 +30,7 @@ from .serializers import (
     OTPRequestDebugSerializer,
     MeSerializer,
     LoginSerializer,
+    ProfileSerializer,
 )
 
 User = get_user_model()
@@ -149,6 +150,29 @@ class MeView(APIView):
     def get(self, request):
         serializer = self.serializer_class(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+
+class ProfileUpdateView(APIView):
+    """GET/PUT profile information (default_address, phone, etc.)"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProfileSerializer
+
+    def get(self, request):
+        profile, created = Profile.objects.get_or_create(user=request.user)
+        serializer = self.serializer_class(profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        profile, created = Profile.objects.get_or_create(user=request.user)
+        serializer = self.serializer_class(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def patch(self, request):
+        return self.put(request)
 
 
 # =========================================================

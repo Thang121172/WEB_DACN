@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuthContext } from "../../context/AuthContext";
+import { useToast } from "../../components/Toast";
 import api from "../../services/http"; // chuẩn bị sẵn cho khi nối backend
 
 // ===============================
@@ -53,7 +54,7 @@ interface OrderDetails {
   subtotal: number;
   delivery_fee: number;
   total: number;
-  status: "Pending" | "Confirmed" | "Ready" | "Cancelled";
+  status: string; // "PENDING" | "CONFIRMED" | "READY_FOR_PICKUP" | "CANCELED" | etc.
 }
 
 // ===============================
@@ -179,6 +180,7 @@ export default function MerchantConfirmOrder() {
   const { user, isAuthenticated, loading: authLoading } = useAuthContext();
   const navigate = useNavigate();
   const { orderId } = useParams<{ orderId: string }>();
+  const { showToast } = useToast();
 
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -200,29 +202,65 @@ export default function MerchantConfirmOrder() {
 
   // fetch chi tiết đơn
   const fetchOrderData = async () => {
+    if (!orderId) {
+      console.error("Order ID is missing from URL");
+      showToast('Không tìm thấy mã đơn hàng', 'error');
+      navigate('/merchant/dashboard');
+      return;
+    }
+
     setLoading(true);
     try {
-      // TODO call API thật, ví dụ:
-      // const token = localStorage.getItem('authToken');
-      // const res = await api.get(`/orders/${orderId}/`, {
-      //   headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      // });
-      // setOrderDetails(res.data);
+      // Đảm bảo orderId là số nguyên
+      const orderIdNum = parseInt(orderId, 10);
+      if (isNaN(orderIdNum)) {
+        throw new Error(`Invalid order ID: ${orderId}`);
+      }
 
-      // Tạm mock:
-      setTimeout(() => {
-        setOrderDetails({
-          ...mockOrderDetails,
-          order_id: Number(orderId || mockOrderDetails.order_id),
-        });
-        setLoading(false);
-      }, 500);
-    } catch (e) {
-      console.error("Failed to fetch order details:", e);
+      console.log(`Fetching order details for order ID: ${orderIdNum}`);
+      
+      // Gọi API thật để lấy chi tiết đơn hàng cho merchant
+      const response = await api.get(`/merchant-orders/${orderIdNum}/`);
+      const data = response.data;
+      
+      // Verify order ID matches
+      const returnedOrderId = data.order_id || data.id;
+      if (returnedOrderId !== orderIdNum) {
+        console.warn(`Order ID mismatch: requested ${orderIdNum}, got ${returnedOrderId}`);
+      }
+      
+      console.log(`Order #${returnedOrderId} loaded: status=${data.status}, total=${data.total || data.total_amount}`);
+      
+      // Map backend response to frontend format
       setOrderDetails({
-        ...mockOrderDetails,
-        order_id: Number(orderId || mockOrderDetails.order_id),
+        order_id: returnedOrderId,
+        customer_name: data.customer_name || '',
+        customer_address: data.customer_address || data.delivery_address || '',
+        customer_phone: data.customer_phone || '',
+        order_time: data.order_time || data.created_at,
+        delivery_time_estimate: '40 phút', // Có thể tính từ created_at
+        payment_method: data.payment_method === 'card' ? 'VISA •••• 4242' : 'Tiền mặt',
+        items: (data.items || []).map((item: any) => ({
+          id: item.id,
+          product_name: item.product_name || item.name || '',
+          quantity: item.quantity || 1,
+          price: parseFloat(item.price || item.price_snapshot || 0),
+          notes: item.notes || item.note || '',
+        })),
+        subtotal: parseFloat(data.subtotal || 0),
+        delivery_fee: parseFloat(data.delivery_fee || 0),
+        total: parseFloat(data.total || data.total_amount || 0),
+        status: data.status || 'PENDING',
       });
+      setLoading(false);
+    } catch (e: any) {
+      console.error("Failed to fetch order details:", e);
+      const errorMsg = e?.response?.data?.detail || 
+                      e?.response?.data?.message ||
+                      e?.message ||
+                      'Không thể tải chi tiết đơn hàng. Vui lòng thử lại.';
+      showToast(errorMsg, 'error');
+      navigate('/merchant/dashboard');
       setLoading(false);
     }
   };
@@ -235,44 +273,97 @@ export default function MerchantConfirmOrder() {
     ) {
       fetchOrderData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user, orderId]);
 
-  // action confirm / cancel
-  const handleAction = async (action: "confirm" | "cancel") => {
-    if (!orderDetails) return;
+  // action confirm / cancel / ready
+  const handleAction = async (action: "confirm" | "cancel" | "ready") => {
+    if (!orderDetails || !orderId) {
+      showToast('Thông tin đơn hàng không hợp lệ', 'error');
+      return;
+    }
+
+    // Đảm bảo dùng orderId từ URL, không phải từ orderDetails (có thể bị sai)
+    const orderIdNum = parseInt(orderId, 10);
+    if (isNaN(orderIdNum)) {
+      showToast('Mã đơn hàng không hợp lệ', 'error');
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      // TODO gọi API backend:
-      // - confirm: POST /api/orders/{id}/set_status/  body {status:"confirmed"}
-      // - cancel:  POST /api/orders/{id}/set_status/  body {status:"cancelled"}
-      //
-      // const token = localStorage.getItem("authToken");
-      // await api.post(
-      //   `/orders/${orderDetails.order_id}/set_status/`,
-      //   { status: action === "confirm" ? "confirmed" : "cancelled" },
-      //   { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
-      // );
+      // Gọi API backend để cập nhật trạng thái đơn hàng
+      let statusValue: string;
+      if (action === "confirm") {
+        statusValue = "CONFIRMED";
+      } else if (action === "ready") {
+        statusValue = "READY_FOR_PICKUP";
+      } else {
+        statusValue = "CANCELED";
+      }
+      
+      console.log(`Updating order #${orderIdNum} status to ${statusValue}`);
+      
+      await api.post(`/orders/${orderIdNum}/set_status/`, {
+        status: statusValue
+      });
 
-      const newStatus = action === "confirm" ? "Confirmed" : "Cancelled";
+      // Reload order details để lấy dữ liệu mới nhất
+      const response = await api.get(`/merchant-orders/${orderIdNum}/`);
+      const data = response.data;
+      
+      // Verify order ID matches
+      const returnedOrderId = data.order_id || data.id;
+      if (returnedOrderId !== orderIdNum) {
+        console.error(`Order ID mismatch after update: requested ${orderIdNum}, got ${returnedOrderId}`);
+      }
+      
+      // Update order details với dữ liệu mới
+      setOrderDetails({
+        order_id: returnedOrderId,
+        customer_name: data.customer_name || '',
+        customer_address: data.customer_address || data.delivery_address || '',
+        customer_phone: data.customer_phone || '',
+        order_time: data.order_time || data.created_at,
+        delivery_time_estimate: '40 phút',
+        payment_method: data.payment_method === 'card' ? 'VISA •••• 4242' : 'Tiền mặt',
+        items: (data.items || []).map((item: any) => ({
+          id: item.id,
+          product_name: item.product_name || item.name || '',
+          quantity: item.quantity || 1,
+          price: parseFloat(item.price || item.price_snapshot || 0),
+          notes: item.notes || item.note || '',
+        })),
+        subtotal: parseFloat(data.subtotal || 0),
+        delivery_fee: parseFloat(data.delivery_fee || 0),
+        total: parseFloat(data.total || data.total_amount || 0),
+        status: data.status || 'PENDING',
+      });
 
-      // update UI mock
-      setOrderDetails((prev) =>
-        prev ? { ...prev, status: newStatus } : prev
+      const actionMessages: Record<string, string> = {
+        "confirm": "XÁC NHẬN",
+        "ready": "SẴN SÀNG CHO SHIPPER LẤY",
+        "cancel": "HỦY"
+      };
+      
+      showToast(
+        `Đơn hàng #${returnedOrderId} đã được ${actionMessages[action]} thành công!`,
+        'success'
       );
 
-      alert(
-        `Đơn hàng #${orderDetails.order_id} đã được ${
-          action === "confirm" ? "XÁC NHẬN" : "HỦY"
-        } thành công!`
-      );
+      // Trigger event để refresh inventory page nếu đang mở
+      window.dispatchEvent(new CustomEvent('inventoryRefresh'));
 
-      navigate("/merchant/dashboard");
-    } catch (err) {
+      setTimeout(() => {
+        navigate("/merchant/dashboard");
+      }, 1500);
+    } catch (err: any) {
       console.error(`Failed to ${action} order:`, err);
-      alert(
-        `Lỗi: Không thể thực hiện hành động ${action.toUpperCase()}.`
-      );
+      const errorMessage = err?.response?.data?.detail || 
+                          err?.response?.data?.message ||
+                          `Lỗi: Không thể thực hiện hành động ${action.toUpperCase()}.`;
+      showToast(errorMessage, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -298,7 +389,12 @@ export default function MerchantConfirmOrder() {
     );
   }
 
-  const isPending = orderDetails.status === "Pending";
+  // Normalize status để xử lý cả uppercase và mixed case
+  const normalizedStatus = (orderDetails.status || "").toUpperCase();
+  const isPending = normalizedStatus === "PENDING";
+  const isConfirmed = normalizedStatus === "CONFIRMED";
+  const isReadyForPickup = normalizedStatus === "READY_FOR_PICKUP";
+  const isCancelled = normalizedStatus === "CANCELED" || normalizedStatus === "CANCELLED";
   const timeSinceOrder = timeSince(orderDetails.order_time);
 
   return (
@@ -324,16 +420,24 @@ export default function MerchantConfirmOrder() {
           className={`text-lg font-bold px-4 py-2 rounded-full text-center min-w-[160px] ${
             isPending
               ? "bg-red-500 text-white animate-pulse"
-              : orderDetails.status === "Confirmed"
+              : orderDetails.status === "CONFIRMED"
               ? "bg-yellow-500 text-white"
-              : orderDetails.status === "Ready"
+              : orderDetails.status === "READY_FOR_PICKUP"
               ? "bg-grabGreen-700 text-white"
-              : "bg-gray-400 text-white"
+              : isCancelled
+              ? "bg-gray-400 text-white"
+              : "bg-blue-500 text-white"
           }`}
         >
           {isPending
             ? "CHỜ XÁC NHẬN"
-            : orderDetails.status.toUpperCase()}
+            : isCancelled
+            ? "ĐÃ HỦY"
+            : normalizedStatus === "CONFIRMED"
+            ? "ĐÃ XÁC NHẬN"
+            : normalizedStatus === "READY_FOR_PICKUP"
+            ? "SẴN SÀNG"
+            : orderDetails.status}
         </div>
       </div>
 
@@ -385,7 +489,7 @@ export default function MerchantConfirmOrder() {
           </div>
 
           {/* Action Buttons */}
-          {isPending ? (
+          {isPending && !isCancelled ? (
             <div className="flex flex-col md:flex-row gap-4 pt-4">
               <button
                 onClick={() => handleAction("confirm")}
@@ -415,22 +519,78 @@ export default function MerchantConfirmOrder() {
                 Từ chối Đơn hàng
               </button>
             </div>
-          ) : orderDetails.status === "Confirmed" || orderDetails.status === "Ready" ? (
-            <div className="flex gap-3">
-              <Link
-                to={`/merchant/orders/${orderDetails.order_id}/handle-out-of-stock`}
-                className="flex-1 py-3 text-lg rounded-xl font-bold transition duration-150 shadow-md flex items-center justify-center border bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200"
+          ) : isConfirmed && !isCancelled ? (
+            <div className="space-y-4">
+              {/* Nút chính: Xác nhận đơn hàng sẵn sàng */}
+              <button
+                onClick={() => handleAction("ready")}
+                className={`w-full py-3 text-lg text-white rounded-xl font-bold transition duration-150 shadow-lg flex items-center justify-center ${
+                  isProcessing
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-grabGreen-700 hover:bg-grabGreen-800"
+                }`}
+                disabled={isProcessing}
               >
-                ⚠️ Xử lý thiếu kho
-              </Link>
-              {orderDetails.payment_method && orderDetails.payment_method !== "Cash" && (
+                <CheckIcon />
+                {isProcessing
+                  ? "Đang xác nhận..."
+                  : "✅ Xác nhận đơn hàng sẵn sàng cho shipper lấy"}
+              </button>
+              
+              {/* Các nút phụ */}
+              <div className="flex gap-3">
                 <Link
-                  to={`/merchant/orders/${orderDetails.order_id}/refund`}
-                  className="flex-1 py-3 text-lg rounded-xl font-bold transition duration-150 shadow-md flex items-center justify-center border bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200"
+                  to={`/merchant/orders/${orderDetails.order_id}/handle-out-of-stock`}
+                  className="flex-1 py-3 text-lg rounded-xl font-bold transition duration-150 shadow-md flex items-center justify-center border bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200"
                 >
-                  💰 Hoàn tiền
+                  ⚠️ Xử lý thiếu kho
                 </Link>
-              )}
+                {orderDetails.payment_method && orderDetails.payment_method !== "Cash" && (
+                  <Link
+                    to={`/merchant/orders/${orderDetails.order_id}/refund`}
+                    className="flex-1 py-3 text-lg rounded-xl font-bold transition duration-150 shadow-md flex items-center justify-center border bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200"
+                  >
+                    💰 Hoàn tiền
+                  </Link>
+                )}
+                <button
+                  onClick={() => handleAction("cancel")}
+                  className={`flex-1 py-3 text-lg rounded-xl font-bold transition duration-150 shadow-md flex items-center justify-center border ${
+                    isProcessing
+                      ? "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
+                      : "bg-red-100 text-red-700 border-red-300 hover:bg-red-200"
+                  }`}
+                  disabled={isProcessing}
+                >
+                  <XIcon />
+                  Hủy đơn hàng
+                </button>
+              </div>
+            </div>
+          ) : isReadyForPickup && !isCancelled ? (
+            <div className="space-y-4">
+              {/* Thông báo đơn đã sẵn sàng */}
+              <div className="p-4 bg-grabGreen-50 text-grabGreen-800 rounded-xl font-medium border border-grabGreen-300 text-center">
+                ✅ Đơn hàng đã sẵn sàng cho shipper lấy. Đang chờ shipper đến nhận hàng.
+              </div>
+              
+              {/* Các nút phụ */}
+              <div className="flex gap-3">
+                <Link
+                  to={`/merchant/orders/${orderDetails.order_id}/handle-out-of-stock`}
+                  className="flex-1 py-3 text-lg rounded-xl font-bold transition duration-150 shadow-md flex items-center justify-center border bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200"
+                >
+                  ⚠️ Xử lý thiếu kho
+                </Link>
+                {orderDetails.payment_method && orderDetails.payment_method !== "Cash" && (
+                  <Link
+                    to={`/merchant/orders/${orderDetails.order_id}/refund`}
+                    className="flex-1 py-3 text-lg rounded-xl font-bold transition duration-150 shadow-md flex items-center justify-center border bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200"
+                  >
+                    💰 Hoàn tiền
+                  </Link>
+                )}
+              </div>
             </div>
           ) : (
             <div className="p-4 bg-grabGreen-50 text-grabGreen-800 rounded-xl font-medium border border-grabGreen-300 text-center text-sm">

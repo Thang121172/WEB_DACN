@@ -10,7 +10,8 @@ interface Order {
   total: number;
   status: string;
   created_at: string;
-  items_count?: number;
+  items_count?: number;  // Số loại món khác nhau
+  total_quantity?: number;  // Tổng số lượng món
 }
 
 const formatCurrency = (amount: number) => {
@@ -69,7 +70,24 @@ export default function CustomerOrders() {
       setLoading(true);
       try {
         const response = await api.get('/orders/');
-        setOrders(response.data || []);
+        // Map backend response to frontend format
+        const ordersData = (response.data || []).map((order: any) => {
+          // Tính tổng số lượng món nếu không có từ backend
+          const totalQuantity = order.total_quantity || 
+            (order.items ? order.items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0) : 0);
+          
+          return {
+            id: order.id,
+            order_id: order.order_id || order.id,
+            merchant_name: order.merchant_name || order.merchant?.name,
+            total: parseFloat(order.total || order.total_amount || 0),
+            status: order.status,
+            created_at: order.created_at || order.order_time,
+            items_count: order.items_count || order.items?.length || 0,
+            total_quantity: totalQuantity,
+          };
+        });
+        setOrders(ordersData);
       } catch (error) {
         console.error('Failed to fetch orders:', error);
         setOrders([]);
@@ -129,11 +147,18 @@ export default function CustomerOrders() {
               </div>
               <div className="flex justify-between items-center pt-4 border-t">
                 <div>
-                  {order.items_count !== undefined && (
+                  {order.total_quantity !== undefined ? (
+                    <p className="text-sm text-gray-600">
+                      {order.total_quantity} phần
+                      {order.items_count && order.items_count > 1 && (
+                        <span className="text-gray-500"> ({order.items_count} loại món)</span>
+                      )}
+                    </p>
+                  ) : order.items_count !== undefined ? (
                     <p className="text-sm text-gray-600">
                       {order.items_count} món
                     </p>
-                  )}
+                  ) : null}
                 </div>
                 <p className="text-xl font-extrabold text-red-600">
                   {formatCurrency(order.total)}

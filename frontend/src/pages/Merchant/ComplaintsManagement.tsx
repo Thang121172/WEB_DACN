@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../context/AuthContext';
+import { useToast } from '../../components/Toast';
 import api from '../../services/http';
 
 interface Complaint {
@@ -33,6 +34,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function ComplaintsManagement() {
   const { user, isAuthenticated, loading: authLoading } = useAuthContext();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
@@ -69,7 +71,7 @@ export default function ComplaintsManagement() {
   const handleRespond = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedComplaint || !responseText) {
-      alert('Vui lòng nhập phản hồi');
+      showToast('Vui lòng nhập phản hồi', 'warning');
       return;
     }
 
@@ -79,14 +81,14 @@ export default function ComplaintsManagement() {
         status: responseStatus
       });
 
-      alert('Đã gửi phản hồi thành công');
+      showToast('Đã gửi phản hồi thành công', 'success');
       setShowResponseForm(false);
       setSelectedComplaint(null);
       setResponseText('');
       fetchComplaints();
     } catch (error: any) {
       console.error('Failed to respond complaint:', error);
-      alert(error.response?.data?.detail || 'Không thể gửi phản hồi');
+      showToast(error.response?.data?.detail || 'Không thể gửi phản hồi', 'error');
     }
   };
 

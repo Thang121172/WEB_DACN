@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import { LocationProvider } from "./context/LocationContext";
+import { ToastProvider } from "./components/Toast";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
@@ -12,7 +13,9 @@ createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <AuthProvider>
         <LocationProvider>
-          <App />
+          <ToastProvider>
+            <App />
+          </ToastProvider>
         </LocationProvider>
       </AuthProvider>
     </BrowserRouter>

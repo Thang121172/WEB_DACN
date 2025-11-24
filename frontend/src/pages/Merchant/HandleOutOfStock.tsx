@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuthContext } from '../../context/AuthContext';
+import { useToast } from '../../components/Toast';
 import api from '../../services/http';
 
 interface OrderItem {
@@ -27,6 +28,7 @@ export default function HandleOutOfStock() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthContext();
+  const { showToast } = useToast();
   const [order, setOrder] = useState<Order | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,7 @@ export default function HandleOutOfStock() {
         setMenuItems(menuResponse.data || []);
       } catch (error) {
         console.error('Failed to fetch data:', error);
-        alert('Không thể tải dữ liệu');
+        showToast('Không thể tải dữ liệu', 'error');
         navigate('/merchant/dashboard');
       } finally {
         setLoading(false);
@@ -87,11 +89,13 @@ export default function HandleOutOfStock() {
 
       await api.post(`/merchant-orders/${orderId}/handle_out_of_stock/`, payload);
 
-      alert('Đã xử lý thiếu kho thành công');
-      navigate('/merchant/dashboard');
+      showToast('Đã xử lý thiếu kho thành công', 'success');
+      setTimeout(() => {
+        navigate('/merchant/dashboard');
+      }, 1500);
     } catch (error: any) {
       console.error('Failed to handle out of stock:', error);
-      alert(error.response?.data?.detail || 'Không thể xử lý thiếu kho');
+      showToast(error.response?.data?.detail || 'Không thể xử lý thiếu kho', 'error');
     } finally {
       setSubmitting(false);
     }

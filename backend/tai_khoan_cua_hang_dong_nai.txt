@@ -1,0 +1,255 @@
+================================================================================
+DANH SACH TAI KHOAN CUA HANG - DONG NAI (BIEN HOA)
+================================================================================
+
+Tong so cua hang: 34
+
+Tai khoan mac dinh cho tat ca merchant: Merchant123
+
+--------------------------------------------------------------------------------
+
+1. Nhà Hàng Hải Sản - Biên Hòa
+   Username: merchant_1_nhahanghaisanbi
+   Email: merchant_1_nhahanghaisanbi@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 1, Đường Lê Lợi, Phường Long Bình, Biên Hòa, Đồng Nai
+   So dien thoai: 0281197671
+
+2. Quán Bún Thịt Nướng - Biên Hòa
+   Username: merchant_2_quanbunthitnướn
+   Email: merchant_2_quanbunthitnướn@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Đồng Khởi, Phường Quận 12, Biên Hòa, Đồng Nai
+   So dien thoai: 02745119966
+
+3. Cơm Tấm Cali 1 - Biên Hòa
+   Username: merchant_3_cơmtấmcali1biên
+   Email: merchant_3_cơmtấmcali1biên@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Nguyễn Đình Chiểu, Phường Tân Phú, Biên Hòa, Đồng Nai
+   So dien thoai: 02511312962
+
+4. Nhà Hàng Thái Lan - Biên Hòa
+   Username: merchant_4_nhahangthailanb
+   Email: merchant_4_nhahangthailanb@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Điện Biên Phủ, Phường Tân Uyên, Biên Hòa, Đồng Nai
+   So dien thoai: 0288275286
+
+5. Cơm Tấm Sườn Bì Chả - Biên Hòa
+   Username: merchant_5_cơmtấmsườnbicha
+   Email: merchant_5_cơmtấmsườnbicha@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu B, Đường Nguyễn Văn Cừ, Phường An Bình, Biên Hòa, Đồng Nai
+   So dien thoai: 0284101988
+
+6. Cơm Gà Nướng 1 - Biên Hòa
+   Username: merchant_6_cơmganướng1biên
+   Email: merchant_6_cơmganướng1biên@fastfood.local
+   Password: Merchant123
+   Dia chi: 812 Đường Hoàng Văn Thụ, Phường Dầu Tiếng, Biên Hòa, Đồng Nai
+   So dien thoai: 02741386436
+
+7. Quán Bánh Mì Chảo - Biên Hòa
+   Username: merchant_7_quanbanhmichaob
+   Email: merchant_7_quanbanhmichaob@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu A, Đường Lý Tự Trọng, Phường Thuận An, Biên Hòa, Đồng Nai
+   So dien thoai: 02510535889
+
+8. Quán Bún Mọc 1 - Biên Hòa
+   Username: merchant_8_quanbunmoc1biên
+   Email: merchant_8_quanbunmoc1biên@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 3, Đường Nguyễn Trãi, Phường Thủ Đức, Biên Hòa, Đồng Nai
+   So dien thoai: 02517677454
+
+9. Quán Bún Bò Huế - Biên Hòa
+   Username: merchant_9_quanbunbohuếbiê
+   Email: merchant_9_quanbunbohuếbiê@fastfood.local
+   Password: Merchant123
+   Dia chi: 413 Đường Lạc Long Quân, Phường Hố Nai, Biên Hòa, Đồng Nai
+   So dien thoai: 02743270818
+
+10. Quán Bánh Mì - Biên Hòa
+   Username: merchant_10_quanbanhmibiênh
+   Email: merchant_10_quanbanhmibiênh@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Lê Duẩn, Phường Thủ Đức, Biên Hòa, Đồng Nai
+   So dien thoai: 02510502339
+
+11. Cơm Gà Hải Nam - Biên Hòa
+   Username: merchant_11_cơmgahainambiên
+   Email: merchant_11_cơmgahainambiên@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 2, Đường Lê Thánh Tôn, Phường Quang Vinh, Biên Hòa, Đồng Nai
+   So dien thoai: 0287196874
+
+12. Quán Bún Riêu Cua - Biên Hòa
+   Username: merchant_12_quanbunriêucuab
+   Email: merchant_12_quanbunriêucuab@fastfood.local
+   Password: Merchant123
+   Dia chi: 84 Đường Nguyễn Văn Linh, Phường Hố Nai, Biên Hòa, Đồng Nai
+   So dien thoai: 02745789983
+
+13. Quán Bún Riêu Cua 1 - Biên Hòa
+   Username: merchant_13_quanbunriêucua1
+   Email: merchant_13_quanbunriêucua1@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 3, Đường Hoàng Hoa Thám, Phường Tân Phong, Biên Hòa, Đồng Nai
+   So dien thoai: 0281547686
+
+14. Quán Bún Bò Giò Heo - Biên Hòa
+   Username: merchant_14_quanbunbogioheo
+   Email: merchant_14_quanbunbogioheo@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Nguyễn Văn Linh, Phường Thuận An, Biên Hòa, Đồng Nai
+   So dien thoai: 02511967428
+
+15. Cơm Tấm Sườn Bì Chả 1 - Biên Hòa
+   Username: merchant_15_cơmtấmsườnbicha
+   Email: merchant_15_cơmtấmsườnbicha@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Nguyễn Đình Chiểu, Phường Thuận An, Biên Hòa, Đồng Nai
+   So dien thoai: 02748653493
+
+16. Nhà Hàng Nhật Bản 1 - Biên Hòa
+   Username: merchant_16_nhahangnhậtban1
+   Email: merchant_16_nhahangnhậtban1@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Nguyễn Thái Học, Phường Trấn Biên, Biên Hòa, Đồng Nai
+   So dien thoai: 0283803286
+
+17. Bún Chả Hà Nội 1 - Biên Hòa
+   Username: merchant_17_bunchahanội1biê
+   Email: merchant_17_bunchahanội1biê@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Nguyễn Trãi, Phường Gò Vấp, Biên Hòa, Đồng Nai
+   So dien thoai: 02515812303
+
+18. Quán Bánh Mì Chả Cá 1 - Biên Hòa
+   Username: merchant_18_quanbanhmichaca
+   Email: merchant_18_quanbanhmichaca@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu C, Đường Lê Thánh Tôn, Phường Bình Đa, Biên Hòa, Đồng Nai
+   So dien thoai: 0283263600
+
+19. Quán Bánh Mì Pate - Biên Hòa
+   Username: merchant_19_quanbanhmipateb
+   Email: merchant_19_quanbanhmipateb@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu C, Đường Lạc Long Quân, Phường Quận 4, Biên Hòa, Đồng Nai
+   So dien thoai: 02515761892
+
+20. Quán Bún Bò Nam Bộ - Biên Hòa
+   Username: merchant_20_quanbunbonambộb
+   Email: merchant_20_quanbunbonambộb@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu B, Đường Võ Văn Tần, Phường Quận 12, Biên Hòa, Đồng Nai
+   So dien thoai: 0286650045
+
+21. Cơm Tấm Sài Gòn - Biên Hòa
+   Username: merchant_21_cơmtấmsaigonbiê
+   Email: merchant_21_cơmtấmsaigonbiê@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 2, Đường Lê Duẩn, Phường Tân Phong, Biên Hòa, Đồng Nai
+   So dien thoai: 02742381377
+
+22. Quán Lẩu Thái - Biên Hòa
+   Username: merchant_22_quanlẩuthaibiên
+   Email: merchant_22_quanlẩuthaibiên@fastfood.local
+   Password: Merchant123
+   Dia chi: 189 Đường Lê Thánh Tôn, Phường Quận 6, Biên Hòa, Đồng Nai
+   So dien thoai: 0287557882
+
+23. Cơm Gà Xối Mỡ - Biên Hòa
+   Username: merchant_23_cơmgaxốimỡbiênh
+   Email: merchant_23_cơmgaxốimỡbiênh@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Nam Kỳ Khởi Nghĩa, Phường Bình Đa, Biên Hòa, Đồng Nai
+   So dien thoai: 0288211409
+
+24. Quán Bánh Mì Thịt Nướng - Biên Hòa
+   Username: merchant_24_quanbanhmithitn
+   Email: merchant_24_quanbanhmithitn@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 1, Đường Võ Thị Sáu, Phường Quận 10, Biên Hòa, Đồng Nai
+   So dien thoai: 02514528183
+
+25. Bún Bò Huế 1 - Biên Hòa
+   Username: merchant_25_bunbohuế1biênho
+   Email: merchant_25_bunbohuế1biênho@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 3, Đường Trần Hưng Đạo, Phường Long Bình Tân, Biên Hòa, Đồng Nai
+   So dien thoai: 02511094032
+
+26. Cơm Tấm Cali - Biên Hòa
+   Username: merchant_26_cơmtấmcalibiênh
+   Email: merchant_26_cơmtấmcalibiênh@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 2, Đường Nguyễn Văn Linh, Phường Gò Vấp, Biên Hòa, Đồng Nai
+   So dien thoai: 0281808248
+
+27. Quán Bánh Mì Pate 1 - Biên Hòa
+   Username: merchant_27_quanbanhmipate1
+   Email: merchant_27_quanbanhmipate1@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu A, Đường Hoàng Văn Thụ, Phường Tân Phong, Biên Hòa, Đồng Nai
+   So dien thoai: 0288400057
+
+28. Bánh Canh Cua - Biên Hòa
+   Username: merchant_28_banhcanhcuabiên
+   Email: merchant_28_banhcanhcuabiên@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 2, Đường Đinh Tiên Hoàng, Phường Tân Hiệp, Biên Hòa, Đồng Nai
+   So dien thoai: 0283530098
+
+29. Quán Bánh Mì Chả Cá - Biên Hòa
+   Username: merchant_29_quanbanhmichaca
+   Email: merchant_29_quanbanhmichaca@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Võ Thị Sáu, Phường Quận 6, Biên Hòa, Đồng Nai
+   So dien thoai: 02518866071
+
+30. Quán Bánh Tráng 2 - Biên Hòa
+   Username: merchant_30_quanbanhtrang2b
+   Email: merchant_30_quanbanhtrang2b@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu A, Đường Nguyễn Huệ, Phường Tân Biên, Biên Hòa, Đồng Nai
+   So dien thoai: 02748065883
+
+31. Cơm Chay 2 - Biên Hòa
+   Username: merchant_31_cơmchay2biênhoa
+   Email: merchant_31_cơmchay2biênhoa@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu C, Đường Nguyễn Văn Trị, Phường Tân Hiệp, Biên Hòa, Đồng Nai
+   So dien thoai: 02743533419
+
+32. Quán Bánh Mì Chả Lụa - Biên Hòa
+   Username: merchant_32_quanbanhmichalu
+   Email: merchant_32_quanbanhmichalu@fastfood.local
+   Password: Merchant123
+   Dia chi: 246 Đường Hoàng Văn Thụ, Phường Bình Thạnh, Biên Hòa, Đồng Nai
+   So dien thoai: 0280587277
+
+33. Nhà Hàng Hải Sản 1 - Biên Hòa
+   Username: merchant_33_nhahanghaisan1b
+   Email: merchant_33_nhahanghaisan1b@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 2, Đường Nguyễn Văn Linh, Phường Tân Biên, Biên Hòa, Đồng Nai
+   So dien thoai: 02510788452
+
+34. Cơm Gà Nướng Muối - Biên Hòa
+   Username: merchant_34_cơmganướngmuốib
+   Email: merchant_34_cơmganướngmuốib@fastfood.local
+   Password: Merchant123
+   Dia chi: 907 Đường Lê Thánh Tôn, Phường Bình Tân, Biên Hòa, Đồng Nai
+   So dien thoai: 02744873199
+
+================================================================================
+
+HUONG DAN SU DUNG:
+1. Dang nhap voi bat ky tai khoan merchant nao trong danh sach
+2. Password mac dinh: Merchant123
+3. Sau khi dang nhap, ban se thay dashboard merchant
+4. Co the xac nhan don hang tu trang merchant dashboard

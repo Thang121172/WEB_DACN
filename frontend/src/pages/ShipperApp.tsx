@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/http';
 import { useAuthContext } from '../context/AuthContext';
+import { useLocation } from '../hooks/useLocation';
+import { useToast } from '../components/Toast';
 
 // ===================================
 // INTERFACES (Mock)
@@ -12,8 +14,8 @@ interface Order {
   store_address: string;
   customer_address: string;
   delivery_fee: number;
-  distance_km: number;
-  status: 'Ready' | 'In Progress' | 'Delivered';
+  distance_km: number | null;
+  status: 'Ready' | 'In Progress' | 'Delivered' | 'Pending';
 }
 
 interface ShipperSummary {
@@ -30,8 +32,22 @@ interface OrderResponse {
   merchant: {
     id: number;
     name: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
   };
+  customer: {
+    id: number;
+    username: string;
+    delivery_address?: string;
+  };
+  shipper?: {
+    id: number;
+    username: string;
+  } | null;
   total_amount: string;
+  distance_to_merchant_km?: number | null;
+  delivery_fee?: number;
 }
 
 // ===================================
@@ -70,8 +86,11 @@ const OrderCard: React.FC<{
   order: Order;
   onAction: (orderId: number, action: 'accept' | 'complete') => void;
   onReportIssue?: (orderId: number) => void;
-}> = ({ order, onAction, onReportIssue }) => {
-  const isAvailable = order.status === 'Ready';
+  isInProgress?: boolean; // Đơn đang giao của shipper hiện tại
+}> = ({ order, onAction, onReportIssue, isInProgress = false }) => {
+  // Nếu isInProgress = true, đây là đơn đang giao của shipper hiện tại
+  // Nếu isInProgress = false, đây là đơn sẵn sàng (chưa có shipper)
+  const isAvailable = !isInProgress;
 
   const handleAction = () => {
     if (isAvailable) {
@@ -120,7 +139,9 @@ const OrderCard: React.FC<{
         </div>
 
         <div className="flex justify-between text-xs text-gray-500">
-          <span>Khoảng cách: {order.distance_km} km</span>
+          <span>
+            Khoảng cách: {order.distance_km !== null ? `${order.distance_km.toFixed(2)} km` : 'Đang tính...'}
+          </span>
           <span>Phí giao hàng: {formatCurrency(order.delivery_fee)}</span>
         </div>
       </div>
@@ -156,55 +177,176 @@ const OrderCard: React.FC<{
 
 export default function ShipperApp() {
   const { user } = useAuthContext();
+  const { location, requestPermission, permissionStatus, setLocation: setLocationState } = useLocation();
+  const { showToast } = useToast();
 
   const [summary, setSummary] = useState<ShipperSummary | null>(null);
   const [availableOrders, setAvailableOrders] = useState<Order[]>([]);
   const [inProgressOrder, setInProgressOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [lastUpdatedLocation, setLastUpdatedLocation] = useState<{lat: number, lng: number, accuracy: number} | null>(null);
+  const [watchId, setWatchId] = useState<number | null>(null);
+  const [profileLocation, setProfileLocation] = useState<{lat: number, lng: number} | null | undefined>(undefined); // undefined = chưa kiểm tra, null = đã kiểm tra nhưng không có
+  const [hasFetched, setHasFetched] = useState(false); // Đánh dấu đã fetch lần đầu
+
+  // Cập nhật GPS location lên backend - chỉ khi có độ chính xác tốt
+  const updateShipperLocation = useCallback(async (lat: number, lng: number, accuracy?: number) => {
+    // Chỉ cập nhật nếu accuracy < 50m (độ chính xác tốt)
+    if (accuracy && accuracy > 50) {
+      console.log(`⚠️ Độ chính xác GPS quá thấp (${accuracy.toFixed(2)}m), không cập nhật lên server. Cần < 50m`);
+      return;
+    }
+
+    // Kiểm tra xem vị trí có thay đổi đáng kể không (ít nhất 10m)
+    if (lastUpdatedLocation) {
+      const distance = Math.sqrt(
+        Math.pow(lat - lastUpdatedLocation.lat, 2) + 
+        Math.pow(lng - lastUpdatedLocation.lng, 2)
+      ) * 111000; // Chuyển đổi sang mét (1 độ ≈ 111km)
+      
+      // Nếu vị trí thay đổi ít hơn 10m và accuracy không tốt hơn, không cập nhật
+      if (distance < 10 && accuracy && lastUpdatedLocation.accuracy && accuracy >= lastUpdatedLocation.accuracy) {
+        console.log(`📍 Vị trí thay đổi không đáng kể (${distance.toFixed(2)}m), bỏ qua cập nhật`);
+        return;
+      }
+    }
+
+    try {
+      await api.post('/shipper/update_location/', {
+        latitude: lat,
+        longitude: lng,
+      });
+      console.log(`✅ Đã cập nhật vị trí GPS lên server: ${lat.toFixed(6)}, ${lng.toFixed(6)} (accuracy: ${accuracy?.toFixed(2)}m)`);
+      setLastUpdatedLocation({ lat, lng, accuracy: accuracy || 0 });
+    } catch (error) {
+      console.error('❌ Lỗi khi cập nhật vị trí GPS:', error);
+    }
+  }, [lastUpdatedLocation]);
+
+  // Lấy GPS location từ profile khi component mount
+  useEffect(() => {
+    const fetchProfileLocation = async () => {
+      try {
+        const response = await api.get('/accounts/me/');
+        const profile = response.data;
+        
+        // Nếu profile có GPS location, sử dụng nó
+        if (profile.latitude && profile.longitude) {
+          const profileLat = parseFloat(profile.latitude);
+          const profileLng = parseFloat(profile.longitude);
+          
+          console.log(`✅ Lấy GPS từ profile: ${profileLat}, ${profileLng}`);
+          setProfileLocation({ lat: profileLat, lng: profileLng });
+          
+          // Set location state để sử dụng ngay (không cần accuracy vì từ database)
+          setLocationState(profileLat, profileLng);
+          
+          // Cập nhật lên backend để đảm bảo đồng bộ (không cần chờ)
+          updateShipperLocation(profileLat, profileLng, 0).catch(err => {
+            console.error('Lỗi khi cập nhật location lên backend:', err);
+          });
+        } else {
+          // Nếu không có GPS trong profile, đánh dấu để fetch data không có GPS
+          console.log('⚠️ Profile không có GPS location');
+          setProfileLocation(null); // Đánh dấu đã kiểm tra nhưng không có GPS
+        }
+      } catch (error) {
+        console.error('❌ Lỗi khi lấy profile location:', error);
+        setProfileLocation(null); // Đánh dấu đã kiểm tra nhưng có lỗi
+      }
+    };
+    
+    if (user?.role === 'shipper') {
+      fetchProfileLocation();
+    }
+  }, [user, setLocationState, updateShipperLocation]);
 
   // Lấy data từ API
-  const fetchShipperData = async () => {
+  const fetchShipperData = useCallback(async () => {
     setLoading(true);
     try {
-      // Lấy danh sách đơn hàng chưa giao xong
-      const response = await api.get('/shipper/');
-      const orders: OrderResponse[] = response.data || [];
+      // Xây dựng query params với GPS location
+      // Ưu tiên location từ profile, sau đó mới đến location từ browser
+      const params: any = { radius: 20 }; // Bán kính 20km
       
-      // Phân loại đơn hàng
-      const available = orders.filter(o => o.status === 'PENDING' || o.status === 'READY_FOR_PICKUP');
-      const inProgress = orders.find(o => o.status === 'DELIVERING' && o.merchant) || null;
+      const latToUse = profileLocation?.lat || location?.latitude;
+      const lngToUse = profileLocation?.lng || location?.longitude;
       
-      // Transform data
-      const availableOrders: Order[] = available.map(o => ({
+      if (latToUse && lngToUse) {
+        params.lat = latToUse;
+        params.lng = lngToUse;
+        console.log(`🔍 Fetch đơn hàng với GPS: ${latToUse}, ${lngToUse}`);
+      } else {
+        console.log('⚠️ Không có GPS, fetch đơn hàng không lọc theo vị trí');
+      }
+      
+      // Lấy danh sách đơn hàng sẵn sàng giao (chưa có shipper), đơn đang giao, và stats
+      const [availableResponse, myOrdersResponse, revenueResponse] = await Promise.all([
+        api.get('/shipper/', { params }),
+        api.get('/shipper/my_orders/').catch(() => ({ data: [] })), // Nếu endpoint chưa có, trả về mảng rỗng
+        api.get('/shipper/revenue/').catch(() => ({ data: { total_earnings: 0, total_deliveries: 0 } })) // Nếu endpoint chưa có, trả về 0
+      ]);
+      
+      const availableOrdersData: OrderResponse[] = availableResponse.data || [];
+      const myOrdersData: OrderResponse[] = myOrdersResponse.data || [];
+      const revenueData = revenueResponse.data || { total_earnings: 0, total_deliveries: 0 };
+      
+      console.log(`✅ Nhận được ${availableOrdersData.length} đơn hàng sẵn sàng và ${myOrdersData.length} đơn đang giao`);
+      console.log(`💰 Stats: ${revenueData.total_deliveries} chuyến, ${revenueData.total_earnings} VND`);
+      
+      // Transform data cho đơn sẵn sàng
+      const availableOrders: Order[] = availableOrdersData.map(o => ({
         id: o.id,
         store_name: o.merchant.name,
-        store_address: '', // API chưa trả về, có thể thêm sau
-        customer_address: '', // API chưa trả về, có thể thêm sau
-        delivery_fee: 0, // API chưa trả về, có thể tính sau
-        distance_km: 0, // API chưa trả về, có thể tính sau
-        status: o.status === 'READY_FOR_PICKUP' ? 'Ready' : 'Pending',
+        store_address: o.merchant.address || '',
+        customer_address: o.customer.delivery_address || '',
+        delivery_fee: o.delivery_fee || 0,
+        distance_km: o.distance_to_merchant_km ?? null,
+        status: 'Ready' as const,
       }));
       
-      const inProgressOrder: Order | null = inProgress ? {
-        id: inProgress.id,
-        store_name: inProgress.merchant.name,
-        store_address: '',
-        customer_address: '',
-        delivery_fee: 0,
-        distance_km: 0,
-        status: 'In Progress',
-      } : null;
+      // Transform data cho đơn đang giao
+      const inProgressOrders: Order[] = myOrdersData.map(o => ({
+        id: o.id,
+        store_name: o.merchant.name,
+        store_address: o.merchant.address || '',
+        customer_address: o.customer.delivery_address || '',
+        delivery_fee: o.delivery_fee || 0,
+        distance_km: o.distance_to_merchant_km ?? null,
+        status: (o.status === 'DELIVERING' ? 'In Progress' : 'Ready') as const,
+      }));
       
-      // Tính summary (có thể gọi API riêng sau)
+      // Tính summary từ API
       const summary: ShipperSummary = {
-        total_deliveries: 0, // Cần API endpoint riêng
-        total_earnings: 0, // Cần API endpoint riêng
-        current_orders: inProgress ? 1 : 0,
+        total_deliveries: revenueData.total_deliveries || 0,
+        total_earnings: revenueData.total_earnings || 0,
+        current_orders: inProgressOrders.length,
       };
       
       setSummary(summary);
+      
+      // Kiểm tra nếu có đơn mới để thông báo (so sánh với số lượng hiện tại)
+      const previousCount = availableOrders.length;
       setAvailableOrders(availableOrders);
-      setInProgressOrder(inProgressOrder);
+      
+      // Thông báo đơn mới (sau khi state được cập nhật)
+      if (availableOrders.length > previousCount && previousCount > 0) {
+        const newOrdersCount = availableOrders.length - previousCount;
+        setTimeout(() => {
+          // Hiển thị thông báo browser
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🚚 Có đơn hàng mới!', {
+              body: `Có ${newOrdersCount} đơn hàng mới sẵn sàng giao trong khu vực của bạn`,
+              icon: '/favicon.ico',
+              tag: 'new-order',
+            });
+          }
+        }, 100);
+      }
+      
+      // Set đơn đang giao (lấy đơn đầu tiên nếu có)
+      setInProgressOrder(inProgressOrders.length > 0 ? inProgressOrders[0] : null);
       setLoading(false);
     } catch (e) {
       console.error('Failed to fetch shipper data:', e);
@@ -213,10 +355,138 @@ export default function ShipperApp() {
       setInProgressOrder(null);
       setLoading(false);
     }
-  };
+  }, [location, profileLocation]);
 
+  // Theo dõi GPS location liên tục cho shipper
   useEffect(() => {
-    fetchShipperData();
+    if (!('geolocation' in navigator)) {
+      setLocationError('Trình duyệt của bạn không hỗ trợ định vị địa lý');
+      return;
+    }
+
+    // Yêu cầu quyền nếu chưa có
+    if (permissionStatus === 'prompt' || permissionStatus === 'denied') {
+      requestPermission();
+    }
+
+    // Nếu đã có quyền, bắt đầu theo dõi vị trí liên tục
+    if (permissionStatus === 'granted' || location) {
+      let bestPosition: GeolocationPosition | null = null;
+      let bestAccuracy = Infinity;
+      
+      // Sử dụng watchPosition để theo dõi vị trí liên tục
+      const id = navigator.geolocation.watchPosition(
+        (pos) => {
+          const accuracy = pos.coords.accuracy || Infinity;
+          
+          // Chỉ cập nhật nếu có độ chính xác tốt hơn
+          if (accuracy < bestAccuracy) {
+            bestPosition = pos;
+            bestAccuracy = accuracy;
+            
+            const newLocation = {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: accuracy,
+              timestamp: pos.timestamp,
+            };
+            
+            // Cập nhật state
+            setLocationState(newLocation.latitude, newLocation.longitude);
+            
+            // Cập nhật lên backend nếu có độ chính xác tốt
+            if (accuracy <= 50) {
+              updateShipperLocation(
+                pos.coords.latitude,
+                pos.coords.longitude,
+                accuracy
+              );
+            } else {
+              console.log(`⚠️ GPS accuracy: ${accuracy.toFixed(2)}m (cần < 50m để cập nhật)`);
+            }
+          }
+        },
+        (err) => {
+          console.error('❌ GPS error:', err);
+          if (err.code === 1) {
+            setLocationError('Bạn đã từ chối quyền truy cập vị trí. Vui lòng cấp quyền để nhận đơn hàng.');
+          } else if (err.code === 2) {
+            setLocationError('Không thể xác định vị trí. Vui lòng kiểm tra GPS hoặc kết nối mạng.');
+          } else {
+            setLocationError('Lỗi khi lấy vị trí GPS. Vui lòng thử lại.');
+          }
+        },
+        {
+          enableHighAccuracy: true, // Yêu cầu độ chính xác cao
+          timeout: 30000, // Timeout 30 giây
+          maximumAge: 5000, // Chỉ chấp nhận vị trí cũ nhất 5 giây
+        }
+      );
+      
+      setWatchId(id);
+      
+      return () => {
+        if (id !== null) {
+          navigator.geolocation.clearWatch(id);
+        }
+      };
+    }
+  }, [permissionStatus, requestPermission, updateShipperLocation]);
+
+  // Fetch data khi có location (ưu tiên profileLocation) - chỉ chạy một lần khi có location
+  useEffect(() => {
+    // Nếu đã fetch rồi, không fetch lại (trừ khi auto-refresh)
+    if (hasFetched) {
+      return;
+    }
+    
+    // Chờ cho đến khi đã kiểm tra profileLocation (không còn undefined)
+    if (profileLocation === undefined) {
+      console.log('⏳ Đang chờ kiểm tra GPS từ profile...');
+      return; // Chưa kiểm tra xong, chờ
+    }
+    
+    // Nếu có profileLocation, fetch ngay lập tức
+    if (profileLocation?.lat && profileLocation?.lng) {
+      console.log('📍 Fetch data với GPS từ profile:', profileLocation);
+      fetchShipperData();
+      setHasFetched(true);
+      return;
+    }
+    
+    // Nếu profileLocation là null (đã kiểm tra nhưng không có), vẫn fetch data không có GPS
+    if (profileLocation === null) {
+      console.log('📍 Profile không có GPS, fetch data không lọc theo vị trí');
+      fetchShipperData();
+      setHasFetched(true);
+      return;
+    }
+    
+    // Nếu không có profileLocation, chờ GPS từ browser (chỉ khi accuracy tốt)
+    if (location?.latitude && location?.longitude && location.accuracy && location.accuracy <= 50) {
+      console.log('📍 Fetch data với GPS từ browser:', location);
+      fetchShipperData();
+      setHasFetched(true);
+    }
+  }, [profileLocation, location, fetchShipperData, hasFetched]);
+
+  // Auto-refresh mỗi 5 giây để nhận đơn mới và cập nhật danh sách (đơn đã được nhận sẽ biến mất)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      // Chỉ refresh nếu có location hoặc đã fetch lần đầu
+      if (hasFetched && (location?.latitude || profileLocation?.lat)) {
+        await fetchShipperData();
+      }
+    }, 5000); // 5 giây - cập nhật nhanh hơn để đơn đã được nhận biến mất sớm
+    
+    return () => clearInterval(interval);
+  }, [location, profileLocation, fetchShipperData, hasFetched]);
+
+  // Yêu cầu quyền thông báo khi component mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }, []);
 
   // Nhận đơn hoặc hoàn tất giao
@@ -231,22 +501,43 @@ export default function ShipperApp() {
         // Gọi API để nhận đơn
         await api.post(`/shipper/${orderId}/pickup/`);
         
-        // Refresh data
+        // Loại bỏ đơn khỏi danh sách sẵn sàng ngay lập tức (optimistic update)
+        setAvailableOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+        
+        // Refresh data để lấy đơn đang giao và cập nhật danh sách
         await fetchShipperData();
-        console.log(`Đã nhận đơn hàng #${orderId}.`);
+        console.log(`✅ Đã nhận đơn hàng #${orderId}.`);
+        showToast(`✅ Đã nhận đơn hàng #${orderId} thành công!`, 'success');
       } else if (action === 'complete') {
         // Cập nhật trạng thái đơn hàng thành DELIVERED
-        await api.patch(`/shipper/${orderId}/`, {
-          status: 'DELIVERED'
-        });
+        await api.post(`/shipper/${orderId}/complete/`);
         
         // Refresh data
         await fetchShipperData();
-        console.log(`Đã hoàn tất giao đơn hàng #${orderId}.`);
+        console.log(`✅ Đã hoàn tất giao đơn hàng #${orderId}.`);
+        showToast(`✅ Đã hoàn tất giao đơn hàng #${orderId}`, 'success');
       }
-    } catch (e) {
-      console.error(`Failed to ${action} order:`, e);
-      alert(`Không thể ${action === 'accept' ? 'nhận' : 'hoàn tất'} đơn hàng. Vui lòng thử lại.`);
+    } catch (e: any) {
+      console.error(`❌ Failed to ${action} order:`, e);
+      
+      // Xử lý lỗi đặc biệt khi đơn đã được shipper khác nhận
+      const statusCode = e?.response?.status;
+      const errorData = e?.response?.data;
+      const errorCode = errorData?.error_code;
+      
+      if (statusCode === 409 || errorCode === 'ORDER_ALREADY_TAKEN') {
+        // Đơn đã được shipper khác nhận - loại bỏ đơn khỏi danh sách ngay lập tức
+        setAvailableOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+        
+        // Refresh danh sách để đảm bảo đồng bộ
+        await fetchShipperData();
+        
+        showToast('⚠️ Đơn hàng này đã được shipper khác nhận. Danh sách đã được cập nhật.', 'warning');
+      } else {
+        // Các lỗi khác
+        const errorMessage = errorData?.detail || `Không thể ${action === 'accept' ? 'nhận' : 'hoàn tất'} đơn hàng. Vui lòng thử lại.`;
+        showToast(errorMessage, 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -259,7 +550,7 @@ export default function ShipperApp() {
 
     const type = issueType === '1' ? 'RETURNED' : issueType === '2' ? 'FAILED_DELIVERY' : null;
     if (!type) {
-      alert('Lựa chọn không hợp lệ');
+      showToast('Lựa chọn không hợp lệ', 'error');
       return;
     }
 
@@ -272,12 +563,13 @@ export default function ShipperApp() {
       reason: reason
     })
       .then(() => {
-        alert('Đã báo cáo vấn đề thành công');
+        showToast('✅ Đã báo cáo vấn đề thành công', 'success');
         fetchShipperData();
       })
-      .catch((error) => {
+      .catch((error: any) => {
         console.error('Failed to report issue:', error);
-        alert('Không thể báo cáo vấn đề. Vui lòng thử lại.');
+        const errorMessage = error?.response?.data?.detail || 'Không thể báo cáo vấn đề. Vui lòng thử lại.';
+        showToast(errorMessage, 'error');
       })
       .finally(() => {
         setLoading(false);
@@ -296,6 +588,66 @@ export default function ShipperApp() {
       <h1 className="text-3xl font-bold text-grabGreen-700 mb-6">
         Chào mừng, Shipper! 
       </h1>
+
+      {/* Thông báo lỗi GPS */}
+      {locationError && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+          <p className="font-semibold">⚠️ {locationError}</p>
+          <button
+            onClick={async () => {
+              await requestPermission();
+              if (location?.latitude && location?.longitude) {
+                setLocationError(null);
+              }
+            }}
+            className="mt-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
+          >
+            Cấp quyền truy cập vị trí
+          </button>
+        </div>
+      )}
+
+      {/* Hiển thị vị trí hiện tại */}
+      {(location || profileLocation) && (
+        <div className={`mb-4 p-3 rounded-lg text-sm ${
+          (location?.accuracy && location.accuracy <= 50) || profileLocation
+            ? 'bg-green-50 text-green-800 border border-green-200' 
+            : 'bg-yellow-50 text-yellow-800 border border-yellow-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="font-semibold">📍 Vị trí hiện tại:</span>{' '}
+              {profileLocation 
+                ? `${profileLocation.lat.toFixed(6)}, ${profileLocation.lng.toFixed(6)} (từ database)`
+                : `${location?.latitude?.toFixed(6)}, ${location?.longitude?.toFixed(6)}`
+              }
+              {location?.accuracy && (
+                <span className={`ml-2 ${location.accuracy <= 50 ? 'text-green-700' : 'text-yellow-700'}`}>
+                  (Độ chính xác GPS: {location.accuracy.toFixed(2)}m)
+                </span>
+              )}
+              {profileLocation && !location?.accuracy && (
+                <span className="ml-2 text-green-700">
+                  (GPS từ database)
+                </span>
+              )}
+            </div>
+            {profileLocation ? (
+              <span className="text-xs bg-green-200 px-2 py-1 rounded">
+                ✅ Vị trí từ database
+              </span>
+            ) : location?.accuracy && location.accuracy > 50 ? (
+              <span className="text-xs bg-yellow-200 px-2 py-1 rounded">
+                ⚠️ Độ chính xác thấp - Vui lòng di chuyển ra ngoài trời
+              </span>
+            ) : location?.accuracy && location.accuracy <= 50 ? (
+              <span className="text-xs bg-green-200 px-2 py-1 rounded">
+                ✅ Vị trí chính xác
+              </span>
+            ) : null}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center p-10 text-gray-500">
@@ -334,11 +686,14 @@ export default function ShipperApp() {
             </h2>
 
             {inProgressOrder ? (
-              <OrderCard
-                order={inProgressOrder}
-                onAction={handleOrderAction}
-                onReportIssue={handleReportIssue}
-              />
+              <div>
+                <OrderCard
+                  order={inProgressOrder}
+                  onAction={handleOrderAction}
+                  onReportIssue={handleReportIssue}
+                  isInProgress={true}
+                />
+              </div>
             ) : (
               <div className="p-8 text-center bg-white rounded-xl shadow-lg text-gray-500 border border-dashed border-gray-300">
                 Hiện tại không có đơn hàng nào bạn đang giao.

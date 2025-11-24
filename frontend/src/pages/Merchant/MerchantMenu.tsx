@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../context/AuthContext';
+import { useToast } from '../../components/Toast';
 import api from '../../services/http';
 
 interface MenuItem {
@@ -22,6 +23,7 @@ const formatCurrency = (amount: number) => {
 export default function MerchantMenu() {
   const { user, isAuthenticated, loading: authLoading } = useAuthContext();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -33,6 +35,8 @@ export default function MerchantMenu() {
     image_url: '',
     is_available: true,
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -66,20 +70,31 @@ export default function MerchantMenu() {
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await api.post('/menus/', {
-        name: formData.name,
-        description: formData.description || null,
-        price: parseFloat(formData.price),
-        image_url: formData.image_url || null,
-        is_available: formData.is_available,
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description || '');
+      formDataToSend.append('price', formData.price);
+      formDataToSend.append('is_available', formData.is_available.toString());
+      if (imageFile) {
+        formDataToSend.append('image', imageFile);
+      } else if (formData.image_url) {
+        formDataToSend.append('image_url', formData.image_url);
+      }
+
+      const response = await api.post('/menus/', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       setMenuItems([...menuItems, response.data]);
       setFormData({ name: '', description: '', price: '', image_url: '', is_available: true });
+      setImageFile(null);
+      setImagePreview(null);
       setShowAddForm(false);
-      alert('Thêm món thành công!');
+      showToast('Thêm món thành công!', 'success');
     } catch (error) {
       console.error('Failed to add menu item:', error);
-      alert('Không thể thêm món. Vui lòng thử lại.');
+      showToast('Không thể thêm món. Vui lòng thử lại.', 'error');
     }
   };
 
@@ -88,46 +103,62 @@ export default function MerchantMenu() {
     if (!editingItem) return;
 
     try {
-      const response = await api.put(`/menus/${editingItem.id}/`, {
-        name: formData.name,
-        description: formData.description || null,
-        price: parseFloat(formData.price),
-        image_url: formData.image_url || null,
-        is_available: formData.is_available,
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description || '');
+      formDataToSend.append('price', formData.price);
+      formDataToSend.append('is_available', formData.is_available.toString());
+      if (imageFile) {
+        formDataToSend.append('image', imageFile);
+      } else if (formData.image_url) {
+        formDataToSend.append('image_url', formData.image_url);
+      }
+
+      const response = await api.put(`/menus/${editingItem.id}/`, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       setMenuItems(menuItems.map(item => item.id === editingItem.id ? response.data : item));
       setEditingItem(null);
       setFormData({ name: '', description: '', price: '', image_url: '', is_available: true });
-      alert('Cập nhật món thành công!');
+      setImageFile(null);
+      setImagePreview(null);
+      showToast('Cập nhật món thành công!', 'success');
     } catch (error) {
       console.error('Failed to update menu item:', error);
-      alert('Không thể cập nhật món. Vui lòng thử lại.');
+      showToast('Không thể cập nhật món. Vui lòng thử lại.', 'error');
     }
   };
 
   const handleDeleteItem = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa món này?')) return;
+    const itemName = menuItems.find(item => item.id === id)?.name || 'món này';
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa "${itemName}"?`)) return;
 
     try {
       await api.delete(`/menus/${id}/`);
       setMenuItems(menuItems.filter(item => item.id !== id));
-      alert('Xóa món thành công!');
+      showToast('Xóa món thành công!', 'success');
     } catch (error) {
       console.error('Failed to delete menu item:', error);
-      alert('Không thể xóa món. Vui lòng thử lại.');
+      showToast('Không thể xóa món. Vui lòng thử lại.', 'error');
     }
   };
 
   const handleToggleAvailability = async (item: MenuItem) => {
     try {
-      const response = await api.put(`/menus/${item.id}/`, {
-        ...item,
+      // Chỉ gửi field is_available để tránh conflict với các field khác
+      const response = await api.patch(`/menus/${item.id}/`, {
         is_available: !item.is_available,
       });
       setMenuItems(menuItems.map(i => i.id === item.id ? response.data : i));
-    } catch (error) {
+      showToast(`Đã ${!item.is_available ? 'kích hoạt' : 'tắt'} món "${item.name}"`, 'success');
+    } catch (error: any) {
       console.error('Failed to toggle availability:', error);
-      alert('Không thể thay đổi trạng thái. Vui lòng thử lại.');
+      const errorMessage = error?.response?.data?.detail || 
+                          error?.response?.data?.message || 
+                          'Không thể thay đổi trạng thái. Vui lòng thử lại.';
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -140,7 +171,21 @@ export default function MerchantMenu() {
       image_url: item.image_url || '',
       is_available: item.is_available,
     });
+    setImageFile(null);
+    setImagePreview(item.image_url || null);
     setShowAddForm(false);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   if (authLoading || loading) {
@@ -163,11 +208,13 @@ export default function MerchantMenu() {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-800">Quản lý Món ăn</h1>
           <button
-            onClick={() => {
-              setShowAddForm(!showAddForm);
-              setEditingItem(null);
-              setFormData({ name: '', description: '', price: '', image_url: '', is_available: true });
-            }}
+              onClick={() => {
+                setShowAddForm(!showAddForm);
+                setEditingItem(null);
+                setFormData({ name: '', description: '', price: '', image_url: '', is_available: true });
+                setImageFile(null);
+                setImagePreview(null);
+              }}
             className="px-6 py-3 bg-grabGreen-700 text-white rounded-lg font-semibold hover:bg-grabGreen-800 transition"
           >
             {showAddForm ? 'Hủy' : '+ Thêm món mới'}
@@ -213,12 +260,35 @@ export default function MerchantMenu() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">URL hình ảnh</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Hình ảnh món ăn</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-grabGreen-500 focus:border-grabGreen-500"
+              />
+              {imagePreview && (
+                <div className="mt-2">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                  />
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-1">Hoặc nhập URL ảnh (nếu không upload file)</p>
               <input
                 type="url"
                 value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-grabGreen-500 focus:border-grabGreen-500"
+                onChange={(e) => {
+                  setFormData({ ...formData, image_url: e.target.value });
+                  if (e.target.value) {
+                    setImagePreview(e.target.value);
+                    setImageFile(null);
+                  }
+                }}
+                placeholder="https://example.com/image.jpg"
+                className="w-full p-2 mt-2 border border-gray-300 rounded-lg focus:ring-grabGreen-500 focus:border-grabGreen-500 text-sm"
               />
             </div>
             <div className="flex items-center">
@@ -243,6 +313,8 @@ export default function MerchantMenu() {
                   setShowAddForm(false);
                   setEditingItem(null);
                   setFormData({ name: '', description: '', price: '', image_url: '', is_available: true });
+                  setImageFile(null);
+                  setImagePreview(null);
                 }}
                 className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition"
               >

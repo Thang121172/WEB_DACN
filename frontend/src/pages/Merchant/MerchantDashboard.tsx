@@ -77,11 +77,22 @@ const StatCard: React.FC<{
 // ORDER ROW COMPONENT
 // ===================================
 const OrderRow: React.FC<{ order: OrderSummary }> = ({ order }) => {
-  const statusClasses: Record<OrderSummary['status'], string> = {
-    Pending: 'bg-red-100 text-red-700',
-    Confirmed: 'bg-yellow-100 text-yellow-700',
-    Ready: 'bg-blue-100 text-blue-700',
-    Cancelled: 'bg-gray-100 text-gray-700',
+  const getStatusClass = (status: string) => {
+    const statusUpper = status.toUpperCase();
+    if (statusUpper === 'PENDING') return 'bg-red-100 text-red-700';
+    if (statusUpper === 'CONFIRMED') return 'bg-yellow-100 text-yellow-700';
+    if (statusUpper === 'READY_FOR_PICKUP' || statusUpper === 'READY') return 'bg-blue-100 text-blue-700';
+    if (statusUpper === 'CANCELED' || statusUpper === 'CANCELLED') return 'bg-gray-100 text-gray-700';
+    return 'bg-gray-100 text-gray-700';
+  };
+
+  const getStatusText = (status: string) => {
+    const statusUpper = status.toUpperCase();
+    if (statusUpper === 'PENDING') return 'Chờ xác nhận';
+    if (statusUpper === 'CONFIRMED') return 'Đã xác nhận';
+    if (statusUpper === 'READY_FOR_PICKUP' || statusUpper === 'READY') return 'Đã sẵn sàng';
+    if (statusUpper === 'CANCELED' || statusUpper === 'CANCELLED') return 'Đã hủy';
+    return status;
   };
 
   return (
@@ -100,15 +111,9 @@ const OrderRow: React.FC<{ order: OrderSummary }> = ({ order }) => {
       </td>
       <td className="py-3 px-4">
         <span
-          className={`px-3 py-1 text-xs font-semibold rounded-full ${statusClasses[order.status]}`}
+          className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusClass(order.status)}`}
         >
-          {order.status === 'Pending'
-            ? 'Chờ xác nhận'
-            : order.status === 'Confirmed'
-            ? 'Đã xác nhận'
-            : order.status === 'Ready'
-            ? 'Đã sẵn sàng'
-            : 'Đã hủy'}
+          {getStatusText(order.status)}
         </span>
       </td>
       <td className="py-3 px-4 text-sm text-gray-500">{order.time}</td>

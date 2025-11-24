@@ -1,0 +1,248 @@
+================================================================================
+DANH SACH TAI KHOAN CUA HANG - BINH DUONG
+================================================================================
+
+Tong so cua hang: 33
+
+Tai khoan mac dinh cho tat ca merchant: Merchant123
+
+--------------------------------------------------------------------------------
+
+1. Quán Bánh Cuốn - Bình Dương
+   Username: merchant_35_quanbanhcuốnbin
+   Email: merchant_35_quanbanhcuốnbin@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Lý Thường Kiệt, Phường Gò Vấp, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02745599074
+
+2. Nhà Hàng Dimsum - Bình Dương
+   Username: merchant_36_nhahangdimsumbi
+   Email: merchant_36_nhahangdimsumbi@fastfood.local
+   Password: Merchant123
+   Dia chi: 545 Đường Nguyễn Văn Linh, Phường Bình Thạnh, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02519038605
+
+3. Nhà Hàng Dimsum 1 - Bình Dương
+   Username: merchant_37_nhahangdimsum1b
+   Email: merchant_37_nhahangdimsum1b@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Lý Thường Kiệt, Phường Trấn Biên, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0282470900
+
+4. Quán Bánh Xèo 1 - Bình Dương
+   Username: merchant_38_quanbanhxeo1bin
+   Email: merchant_38_quanbanhxeo1bin@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 1, Đường Nguyễn Văn Trị, Phường Quận 9, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0280539100
+
+5. Cơm Tấm Sài Gòn 1 - Bình Dương
+   Username: merchant_39_cơmtấmsaigon1bi
+   Email: merchant_39_cơmtấmsaigon1bi@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 2, Đường Trần Quốc Toản, Phường Quận 4, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0280599633
+
+6. Quán Bánh Mì Thịt Nướng 1 - Bình Dương
+   Username: merchant_40_quanbanhmithitn
+   Email: merchant_40_quanbanhmithitn@fastfood.local
+   Password: Merchant123
+   Dia chi: 609 Đường Hoàng Hoa Thám, Phường Tân Hiệp, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0285747900
+
+7. Nhà Hàng Trung Hoa 1 - Bình Dương
+   Username: merchant_41_nhahangtrunghoa
+   Email: merchant_41_nhahangtrunghoa@fastfood.local
+   Password: Merchant123
+   Dia chi: 200 Đường Trần Hưng Đạo, Phường Quận 5, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02511617968
+
+8. Quán Bún Mọc 2 - Bình Dương
+   Username: merchant_42_quanbunmoc2binh
+   Email: merchant_42_quanbunmoc2binh@fastfood.local
+   Password: Merchant123
+   Dia chi: 733 Đường Nguyễn Thị Minh Khai, Phường Quận 8, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0288833590
+
+9. Bún Chả Hà Nội - Bình Dương
+   Username: merchant_43_bunchahanộibinh
+   Email: merchant_43_bunchahanộibinh@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Lê Văn Sỹ, Phường Tam Hòa, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02511337516
+
+10. Quán Bún Bò Nam Bộ 1 - Bình Dương
+   Username: merchant_44_quanbunbonambộ1
+   Email: merchant_44_quanbunbonambộ1@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu 3, Đường Bạch Đằng, Phường Trấn Biên, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02510048499
+
+11. Nhà Hàng Việt Nam 1 - Bình Dương
+   Username: merchant_45_nhahangviệtnam1
+   Email: merchant_45_nhahangviệtnam1@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu C, Đường Nam Kỳ Khởi Nghĩa, Phường Tân Biên, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0283941706
+
+12. Quán Cháo Lòng - Bình Dương
+   Username: merchant_46_quanchaolongbin
+   Email: merchant_46_quanchaolongbin@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Hoàng Văn Thụ, Phường Thủ Đức, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02741631105
+
+13. Quán Bún Thịt Nướng 1 - Bình Dương
+   Username: merchant_47_quanbunthitnướn
+   Email: merchant_47_quanbunthitnướn@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Nguyễn Thái Học, Phường Quận 9, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02743026774
+
+14. Cơm Gà Xối Mỡ 1 - Bình Dương
+   Username: merchant_48_cơmgaxốimỡ1binh
+   Email: merchant_48_cơmgaxốimỡ1binh@fastfood.local
+   Password: Merchant123
+   Dia chi: Đường Pasteur, Phường Tân Phong, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02510053914
+
+15. Quán Phở Bò 1 - Bình Dương
+   Username: merchant_49_quanphởbo1binhd
+   Email: merchant_49_quanphởbo1binhd@fastfood.local
+   Password: Merchant123
+   Dia chi: Khu A, Đường Điện Biên Phủ, Phường Hóc Môn, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02513542423
+
+16. Cơm Gà Nướng - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu C, Đường Lý Tự Trọng, Phường Quận 3, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0282919012
+
+17. Nhà Hàng Trung Hoa - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Khu 2, Đường Cách Mạng Tháng 8, Phường Phú Nhuận, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0286584338
+
+18. Quán Cơm Gia Đình 1 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Bạch Đằng, Phường Tân Phong, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02515160498
+
+19. Nhà Hàng Nhật Bản - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Hoàng Hoa Thám, Phường Thủ Đức, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0287463388
+
+20. Bánh Canh Cua 1 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 234 Đường Cộng Hòa, Phường Tân Bình, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0287756753
+
+21. Cơm Gà Nướng Muối 1 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Lê Thánh Tôn, Phường Quận 2, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02744791160
+
+22. Cơm Gà Xối Mỡ 2 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 157 Đường Hai Bà Trưng, Phường Quận 3, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02741442013
+
+23. Nhà Hàng BBQ - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 14 Đường Cộng Hòa, Phường Thủ Đức, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02742199984
+
+24. Cơm Gà Hải Nam 2 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 960 Đường Lê Lợi, Phường Hòa Bình, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02511738897
+
+25. Cơm Tấm Sườn Bì Chả 2 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Hai Bà Trưng, Phường Tân Vạn, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02515782514
+
+26. Nhà Hàng BBQ 2 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Nguyễn Thị Minh Khai, Phường Quận 12, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02742009298
+
+27. Quán Bún Đậu - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Cộng Hòa, Phường Quận 3, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0287919364
+
+28. Nhà Hàng Thái Lan 1 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 263 Đường Nguyễn Đình Chiểu, Phường Quận 12, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0283976246
+
+29. Quán Bún Riêu Cua 2 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 410 Đường Lê Duẩn, Phường Tam Hiệp, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0280542094
+
+30. Quán Bánh Mì Pate 2 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Điện Biên Phủ, Phường Hố Nai, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02512977748
+
+31. Quán Bánh Xèo 3 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: 726 Đường Lê Lợi, Phường Hòa Bình, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0284482027
+
+32. Quán Lẩu Thái 1 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Lý Tự Trọng, Phường Tân Phú, Thủ Dầu Một, Bình Dương
+   So dien thoai: 0285895755
+
+33. Nhà Hàng BBQ 1 - Bình Dương
+   Username: merchant_default
+   Email: merchant@fastfood.com
+   Password: Merchant123
+   Dia chi: Đường Võ Thị Sáu, Phường Thủ Đức, Thủ Dầu Một, Bình Dương
+   So dien thoai: 02510368980
+
+================================================================================
+
+HUONG DAN SU DUNG:
+1. Dang nhap voi bat ky tai khoan merchant nao trong danh sach
+2. Password mac dinh: Merchant123
+3. Sau khi dang nhap, ban se thay dashboard merchant
+4. Co the xac nhan don hang tu trang merchant dashboard

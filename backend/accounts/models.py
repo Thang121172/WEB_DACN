@@ -37,6 +37,20 @@ class Profile(models.Model):
         help_text="Địa chỉ giao hàng mặc định (customer)",
     )
 
+    phone = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Số điện thoại",
+    )
+
+    full_name = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        help_text="Họ và tên đầy đủ",
+    )
+
     store_name = models.CharField(
         max_length=150,
         blank=True,
@@ -61,6 +75,29 @@ class Profile(models.Model):
     is_available = models.BooleanField(
         default=True,
         help_text="Shipper đang bật chế độ nhận đơn?",
+    )
+
+    # GPS location cho shipper
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        help_text="Vĩ độ GPS của shipper (để phân luồng đơn hàng)",
+    )
+
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        help_text="Kinh độ GPS của shipper (để phân luồng đơn hàng)",
+    )
+
+    location_updated_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Thời điểm cập nhật vị trí GPS lần cuối",
     )
 
     def __str__(self):
